@@ -1,0 +1,6 @@
+# Routes Directory
+
+Place routing configuration here:
+- AppRoutes.tsx - Route definitions
+- guards.tsx - Route guards
+

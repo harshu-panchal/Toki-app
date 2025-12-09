@@ -1,0 +1,5 @@
+# Constants Directory
+
+Place app-wide constants here:
+- index.ts - Export all constants
+

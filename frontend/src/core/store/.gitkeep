@@ -1,0 +1,6 @@
+# Global Store Directory
+
+Place global Zustand stores here:
+- authStore.ts - Authentication state
+- appStore.ts - Global app state
+

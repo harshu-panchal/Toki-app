@@ -1,0 +1,12 @@
+# UI Components Directory
+
+Place all reusable UI components here:
+- Button.tsx
+- Input.tsx
+- Modal.tsx
+- Card.tsx
+- Avatar.tsx
+- Badge.tsx
+- LoadingSpinner.tsx
+- etc.
+

@@ -1,0 +1,5 @@
+# Shared Types Directory
+
+Place shared TypeScript types/interfaces here:
+- index.ts - Export all shared types
+

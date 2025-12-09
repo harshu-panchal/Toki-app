@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+
+There are 3 developers working on different modules. They need to continuously push the code to github, but they might forget to pull the changes and when adding their code they might run into various conflicts.
+
+In order to reduce this to some extent, implement a warning system before making changes to any root files such as root css, root app.tsx, package.json etc. so that the other developers could also be on the same page before implementing their own changes.
+
+Also if working on a specific module. Do not make changes to the other modules. 
+
+1 developer should only work on a specific module and should not be allowed to make changes to the other module. If required to make changes to the other module while implementation, make sure to provide a warning to ask to the other developer to make the specific change before moving to the next process. Stop your process then and there itself and ask to move further once the changes have been made and pushed by the other developer and move further only when you have pulled the change.
+
+---

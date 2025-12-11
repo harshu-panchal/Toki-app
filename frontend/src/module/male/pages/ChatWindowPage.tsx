@@ -5,7 +5,9 @@ import { MessageBubble } from '../components/MessageBubble';
 import { MessageInput } from '../components/MessageInput';
 import { PhotoPickerModal } from '../components/PhotoPickerModal';
 import { ChatMoreOptionsModal } from '../components/ChatMoreOptionsModal';
+import { ChatGiftSelectorModal } from '../components/ChatGiftSelectorModal';
 import type { Message } from '../types/male.types';
+import type { Gift } from '../types/male.types';
 
 // Mock data - replace with actual API calls
 const mockChats: Record<string, { userName: string; userAvatar: string; isOnline: boolean; isVIP?: boolean }> = {
@@ -174,17 +176,23 @@ const getMockMessages = (chatId: string): Message[] => {
 export const ChatWindowPage = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [chatId]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [coinBalance] = useState(450);
+  const [availableGifts] = useState(5); // Free gifts from VIP
   const [isPhotoPickerOpen, setIsPhotoPickerOpen] = useState(false);
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
+  const [isGiftSelectorOpen, setIsGiftSelectorOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInfo = chatId ? mockChats[chatId] : null;
 
   // Load messages for the current chat
   useEffect(() => {
     if (!chatId || !chatInfo) {
-      navigate('/chats');
+      navigate('/male/chats');
       return;
     }
     // Load messages for this chat
@@ -256,6 +264,52 @@ export const ChatWindowPage = () => {
     setMessages((prev) => [...prev, newMessage]);
   };
 
+  const handleSendGifts = (gifts: Gift[], note?: string) => {
+    if (!chatId || gifts.length === 0) return;
+
+    // Calculate total cost (considering free gifts)
+    let totalCost = 0;
+    if (availableGifts > 0) {
+      const freeCount = Math.min(availableGifts, gifts.length);
+      const paidGifts = gifts.slice(freeCount);
+      totalCost = paidGifts.reduce((sum, gift) => sum + gift.cost, 0);
+    } else {
+      totalCost = gifts.reduce((sum, gift) => sum + gift.cost, 0);
+    }
+
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      chatId,
+      senderId: 'me',
+      senderName: 'You',
+      content: `Sent ${gifts.length} gift${gifts.length > 1 ? 's' : ''}`,
+      timestamp: new Date(),
+      type: 'gift',
+      isSent: true,
+      readStatus: 'sent',
+      cost: totalCost,
+      gifts,
+      giftNote: note,
+    };
+
+    setMessages((prev) => [...prev, newMessage]);
+
+    // Simulate response after 2 seconds
+    setTimeout(() => {
+      const responseMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        chatId,
+        senderId: 'other',
+        senderName: chatInfo?.userName || 'User',
+        content: `Thank you for the ${gifts.length > 1 ? 'gifts' : 'gift'}! ${gifts.map((g) => g.name).join(', ')} 🎁`,
+        timestamp: new Date(),
+        type: 'text',
+        isSent: false,
+      };
+      setMessages((prev) => [...prev, responseMessage]);
+    }, 2000);
+  };
+
   const handleMoreClick = () => {
     setIsMoreOptionsOpen(true);
   };
@@ -279,7 +333,7 @@ export const ChatWindowPage = () => {
 
   const handleDelete = () => {
     console.log('Delete chat');
-    navigate('/chats');
+    navigate('/male/chats');
     // TODO: Implement delete chat functionality
   };
 
@@ -310,6 +364,7 @@ export const ChatWindowPage = () => {
       <MessageInput
         onSendMessage={handleSendMessage}
         onSendPhoto={handleSendPhoto}
+        onSendGift={() => setIsGiftSelectorOpen(true)}
         placeholder="Type a message..."
         coinCost={20}
         disabled={coinBalance < 20}
@@ -331,6 +386,15 @@ export const ChatWindowPage = () => {
         onReport={handleReport}
         onDelete={handleDelete}
         userName={chatInfo?.userName}
+      />
+
+      {/* Gift Selector Modal */}
+      <ChatGiftSelectorModal
+        isOpen={isGiftSelectorOpen}
+        onClose={() => setIsGiftSelectorOpen(false)}
+        onSendGifts={handleSendGifts}
+        availableGifts={availableGifts}
+        coinBalance={coinBalance}
       />
     </div>
   );

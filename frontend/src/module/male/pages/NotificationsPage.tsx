@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TopAppBar } from '../components/TopAppBar';
 import { BottomNavigation } from '../components/BottomNavigation';
@@ -16,7 +16,7 @@ const mockNotifications: Notification[] = [
     isRead: false,
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBNnKyZLNWCV7B-XwKgjd9-bbG9ZSq583oYGij7uKTYk2Ah_9nkpqgsGSDu-FUgux5QDiLCTw_y9JxTBhkZjWAOOReMhlK98A_84vIsKaxQ0IUzZqkJ7-wnAv67HRuUVltC2QQzOfbTk1-OdjqC7SWT4iG-MXs81ePZK3x1mYOHabRqp4eH7yIfiX3tH-YMXSs1uWS41vrxzPC8_MJHasLGiUWINfHYQ7KF2jfo0n_Yo6qBJKr_qMrOBUdimUVVJdY46GD7L0v-oL4',
     relatedUserId: '1',
-    actionUrl: '/profile/1',
+    actionUrl: '/male/profile/1',
   },
   {
     id: '2',
@@ -27,7 +27,7 @@ const mockNotifications: Notification[] = [
     isRead: false,
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCLUSJJYAwx8tl_zGDnOiTXyUUZNGZvfSUhgCgsc5vA2u3832geBVry-vrxCLbywcPMNdDw9Pp8aQYpK6Of5m_eCNYG0p8DZ_zKmzCBISKf3HqDRE9LKIkflketnQjBg0ihzj9xMoUbFN0MewVDhhm62RT4P8ApfLpMqm1KF4cJSY8J3ofy8uvQLeu7ka7eCxUsjWF4-UjrzrD1786TFutJ9_LA2fBbGdcQt8H5YNPFmG4lNC_tEwPefXDp1ieMAWqV4GmL4cQser8',
     relatedChatId: '2',
-    actionUrl: '/chat/2',
+    actionUrl: '/male/chat/2',
   },
   {
     id: '3',
@@ -73,6 +73,10 @@ const filterOptions = [
 
 export const NotificationsPage = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const [selectedFilter, setSelectedFilter] = useState('all');
 
@@ -137,16 +141,16 @@ export const NotificationsPage = () => {
   const handleNavigationClick = (itemId: string) => {
     switch (itemId) {
       case 'discover':
-        navigate('/discover');
+        navigate('/male/discover');
         break;
       case 'chats':
-        navigate('/chats');
+        navigate('/male/chats');
         break;
       case 'wallet':
-        navigate('/wallet');
+        navigate('/male/wallet');
         break;
       case 'profile':
-        navigate('/my-profile');
+        navigate('/male/my-profile');
         break;
       default:
         break;

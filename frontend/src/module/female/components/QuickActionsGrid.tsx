@@ -1,4 +1,4 @@
-import { MaterialSymbol } from '../types/material-symbol';
+import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 
 interface QuickAction {
   id: string;
@@ -31,7 +31,7 @@ export const QuickActionsGrid = ({ actions }: QuickActionsGridProps) => {
   return (
     <div className="flex w-full flex-col px-4">
       <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">Quick Actions</h2>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {actions.map((action) => (
           <QuickActionCard key={action.id} action={action} />
         ))}

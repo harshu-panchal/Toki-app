@@ -67,10 +67,12 @@ export interface Message {
   senderAvatar?: string;
   content: string;
   timestamp: Date;
-  type: 'text' | 'image' | 'photo';
+  type: 'text' | 'image' | 'photo' | 'gift';
   isSent: boolean; // true if sent by current user, false if received
   readStatus?: 'sent' | 'delivered' | 'read';
   cost?: number; // Cost in coins for male users
+  gifts?: Gift[]; // Gifts sent with the message
+  giftNote?: string; // Optional note with gifts
 }
 
 export interface Transaction {
@@ -105,5 +107,38 @@ export interface Notification {
   relatedUserId?: string;
   relatedChatId?: string;
   actionUrl?: string;
+}
+
+export interface Gift {
+  id: string;
+  name: string;
+  icon: string;
+  cost: number;
+  description?: string;
+  category?: 'romantic' | 'fun' | 'luxury' | 'special';
+  isAvailable?: boolean;
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  category: 'vip' | 'achievement' | 'special' | 'limited';
+  unlockedAt?: string;
+  isUnlocked: boolean;
+  rarity?: 'common' | 'rare' | 'epic' | 'legendary';
+}
+
+export interface GiftTransaction {
+  id: string;
+  giftId: string;
+  giftName: string;
+  recipientId: string;
+  recipientName: string;
+  recipientAvatar: string;
+  sentAt: string;
+  cost: number;
+  message?: string;
 }
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CoinPurchaseHeader } from '../components/CoinPurchaseHeader';
 import { SegmentedControls } from '../components/SegmentedControls';
@@ -58,6 +58,10 @@ const filterOptions = [
 
 export const PurchaseHistoryPage = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [selectedFilter, setSelectedFilter] = useState('all');
 
   const filteredHistory = useMemo(() => {
@@ -82,7 +86,7 @@ export const PurchaseHistoryPage = () => {
   return (
     <div className="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased selection:bg-primary selection:text-white pb-24 min-h-screen">
       {/* Top App Bar */}
-      <CoinPurchaseHeader onHistoryClick={() => navigate('/buy-coins')} />
+      <CoinPurchaseHeader onHistoryClick={() => navigate('/male/buy-coins')} />
 
       <div className="max-w-md mx-auto w-full flex flex-col p-4">
         {/* Header */}

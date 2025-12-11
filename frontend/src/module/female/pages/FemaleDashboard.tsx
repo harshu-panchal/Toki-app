@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { EarningsCard } from '../components/EarningsCard';
 import { FemaleStatsGrid } from '../components/FemaleStatsGrid';
 import { ActiveChatsList } from '../components/ActiveChatsList';
 import { FemaleBottomNavigation } from '../components/FemaleBottomNavigation';
+import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
+import { FemaleSidebar } from '../components/FemaleSidebar';
 import { QuickActionsGrid } from '../components/QuickActionsGrid';
+import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import type { FemaleDashboardData } from '../types/female.types';
 
 // Mock data - replace with actual API calls
@@ -61,22 +64,22 @@ const mockDashboardData: FemaleDashboardData = {
   ],
 };
 
-const navigationItems = [
-  { id: 'dashboard', icon: 'home', label: 'Home', isActive: true },
-  { id: 'chats', icon: 'chat_bubble', label: 'Chats', hasBadge: true },
-  { id: 'earnings', icon: 'account_balance_wallet', label: 'Earnings' },
-  { id: 'profile', icon: 'person', label: 'Profile' },
-];
 
 const quickActions = [
   { id: 'earnings', icon: 'trending_up', label: 'View Earnings' },
   { id: 'withdraw', icon: 'payments', label: 'Withdraw' },
+  { id: 'trade-gifts', icon: 'redeem', label: 'Trade Gifts' },
   { id: 'auto-messages', icon: 'auto_awesome', label: 'Auto Messages' },
 ];
 
 export const FemaleDashboard = () => {
   const [dashboardData] = useState<FemaleDashboardData>(mockDashboardData);
   const navigate = useNavigate();
+  const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const handleNotificationClick = () => {
     navigate('/female/notifications');
@@ -98,45 +101,41 @@ export const FemaleDashboard = () => {
     navigate('/female/chats');
   };
 
-  const handleNavigationClick = (itemId: string) => {
-    switch (itemId) {
-      case 'dashboard':
-        navigate('/female/dashboard');
-        break;
-      case 'chats':
-        navigate('/female/chats');
-        break;
-      case 'earnings':
-        navigate('/female/earnings');
-        break;
-      case 'profile':
-        navigate('/female/my-profile');
-        break;
-      default:
-        break;
-    }
-  };
 
-  const handleQuickActionClick = (actionId: string) => {
-    switch (actionId) {
-      case 'earnings':
-        navigate('/female/earnings');
-        break;
-      case 'withdraw':
-        navigate('/female/withdrawal');
-        break;
-      case 'auto-messages':
-        navigate('/female/auto-messages');
-        break;
-      default:
-        break;
-    }
-  };
+      const handleQuickActionClick = (actionId: string) => {
+        switch (actionId) {
+          case 'earnings':
+            navigate('/female/earnings');
+            break;
+          case 'withdraw':
+            navigate('/female/withdrawal');
+            break;
+          case 'trade-gifts':
+            navigate('/female/trade-gifts');
+            break;
+          case 'auto-messages':
+            navigate('/female/auto-messages');
+            break;
+          default:
+            break;
+        }
+      };
 
   return (
     <div className="relative flex w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-20">
+      {/* Top Navbar */}
+      <FemaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
+
+      {/* Sidebar */}
+      <FemaleSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        items={navigationItems}
+        onItemClick={handleNavigationClick}
+      />
+
       {/* Profile Header Section */}
-      <div className="flex p-4 pt-8 @container">
+      <div className="flex p-4 pt-4 @container">
         <div className="flex w-full flex-col gap-4">
           <ProfileHeader
             user={dashboardData.user}

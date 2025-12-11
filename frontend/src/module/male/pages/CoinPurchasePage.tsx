@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CoinPurchaseHeader } from '../components/CoinPurchaseHeader';
 import { BalanceDisplay } from '../components/BalanceDisplay';
@@ -65,15 +65,19 @@ const paymentMethods = [
 
 export const CoinPurchasePage = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [balance] = useState(0);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('apple_pay');
 
   const handleHistoryClick = () => {
-    navigate('/purchase-history');
+    navigate('/male/purchase-history');
   };
 
   const handleBuyClick = (planId: string) => {
-    navigate(`/payment/${planId}`);
+    navigate(`/male/payment/${planId}`);
   };
 
   return (

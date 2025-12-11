@@ -36,7 +36,8 @@ export const QuickActionsModal = ({
   const handleAction = () => {
     if (actionId === 'vip') {
       onVipPurchase?.();
-    } else if (actionId === 'gift' && selectedGift) {
+    } else if (actionId === 'gift') {
+      // Navigate to gifts page instead of modal
       onSendGift?.();
     }
     onClose();

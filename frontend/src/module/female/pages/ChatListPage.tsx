@@ -1,9 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChatListHeader } from '../components/ChatListHeader';
 import { SearchBar } from '../components/SearchBar';
 import { ChatListItem } from '../components/ChatListItem';
 import { FemaleBottomNavigation } from '../components/FemaleBottomNavigation';
+import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
+import { FemaleSidebar } from '../components/FemaleSidebar';
+import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import type { Chat } from '../types/female.types';
 
 // Mock data - replace with actual API calls
@@ -52,15 +55,13 @@ const mockChats: Chat[] = [
   },
 ];
 
-const navigationItems = [
-  { id: 'dashboard', icon: 'home', label: 'Home' },
-  { id: 'chats', icon: 'chat_bubble', label: 'Chats', isActive: true, hasBadge: true },
-  { id: 'earnings', icon: 'account_balance_wallet', label: 'Earnings' },
-  { id: 'profile', icon: 'person', label: 'Profile' },
-];
-
 export const ChatListPage = () => {
   const navigate = useNavigate();
+  const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredChats = useMemo(() => {
@@ -77,27 +78,19 @@ export const ChatListPage = () => {
     navigate(`/female/chat/${chatId}`);
   };
 
-  const handleNavigationClick = (itemId: string) => {
-    switch (itemId) {
-      case 'dashboard':
-        navigate('/female/dashboard');
-        break;
-      case 'chats':
-        navigate('/female/chats');
-        break;
-      case 'earnings':
-        navigate('/female/earnings');
-        break;
-      case 'profile':
-        navigate('/female/my-profile');
-        break;
-      default:
-        break;
-    }
-  };
-
   return (
     <div className="flex flex-col bg-background-light dark:bg-background-dark min-h-screen pb-20">
+      {/* Top Navbar */}
+      <FemaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
+
+      {/* Sidebar */}
+      <FemaleSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        items={navigationItems}
+        onItemClick={handleNavigationClick}
+      />
+
       <ChatListHeader />
       <SearchBar onSearch={setSearchQuery} placeholder="Search chats..." />
       <div className="flex-1 overflow-y-auto px-4 py-2 min-h-0">

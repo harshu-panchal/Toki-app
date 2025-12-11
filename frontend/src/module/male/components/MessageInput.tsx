@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { MaterialSymbol } from '../types/material-symbol';
+import { AttachmentMenu } from './AttachmentMenu';
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
   onSendPhoto?: () => void;
+  onSendGift?: () => void;
   placeholder?: string;
   coinCost?: number;
   disabled?: boolean;
@@ -12,12 +14,15 @@ interface MessageInputProps {
 export const MessageInput = ({
   onSendMessage,
   onSendPhoto,
+  onSendGift,
   placeholder = 'Type a message...',
   coinCost,
   disabled = false,
 }: MessageInputProps) => {
   const [message, setMessage] = useState('');
+  const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
     if (message.trim() && !disabled) {
@@ -34,19 +39,64 @@ export const MessageInput = ({
     }
   };
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsAttachmentMenuOpen(false);
+      }
+    };
+
+    if (isAttachmentMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAttachmentMenuOpen]);
+
+  // Build attachment menu items
+  const attachmentItems = [];
+  if (onSendGift) {
+    attachmentItems.push({
+      id: 'gift',
+      icon: 'redeem',
+      label: 'Send Gift',
+      onClick: onSendGift,
+      color: 'bg-pink-500',
+    });
+  }
+  if (onSendPhoto) {
+    attachmentItems.push({
+      id: 'photo',
+      icon: 'image',
+      label: 'Send Photo',
+      onClick: onSendPhoto,
+      color: 'bg-blue-500',
+    });
+  }
+
   return (
-    <div className="px-4 py-3 bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-white/5">
+    <div className="px-4 py-3 bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-white/5 relative">
       <div className="flex items-end gap-2">
-        {/* Photo Button */}
-        {onSendPhoto && (
-          <button
-            onClick={onSendPhoto}
-            disabled={disabled}
-            className="flex items-center justify-center h-10 w-10 rounded-full bg-gray-200 dark:bg-[#342d18] text-gray-600 dark:text-white hover:bg-gray-300 dark:hover:bg-[#4b202e] transition-colors active:scale-95 shrink-0 disabled:opacity-50"
-            aria-label="Send photo"
-          >
-            <MaterialSymbol name="image" />
-          </button>
+        {/* Attachment Menu Button (+ Button) */}
+        {(onSendGift || onSendPhoto) && (
+          <div className="relative shrink-0" ref={menuRef}>
+            <button
+              onClick={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
+              disabled={disabled}
+              className="flex items-center justify-center h-10 w-10 rounded-full bg-gray-200 dark:bg-[#342d18] text-gray-600 dark:text-white hover:bg-gray-300 dark:hover:bg-[#4b202e] transition-colors active:scale-95 disabled:opacity-50"
+              aria-label="Attachments"
+            >
+              <MaterialSymbol name="add" />
+            </button>
+            <AttachmentMenu
+              isOpen={isAttachmentMenuOpen}
+              onClose={() => setIsAttachmentMenuOpen(false)}
+              items={attachmentItems}
+            />
+          </div>
         )}
 
         {/* Input Field */}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChatListHeader } from '../components/ChatListHeader';
 import { SearchBar } from '../components/SearchBar';
@@ -93,6 +93,10 @@ const navigationItems = [
 
 export const ChatListPage = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [coinBalance] = useState(450);
   const [isEditChatOpen, setIsEditChatOpen] = useState(false);
@@ -119,26 +123,26 @@ export const ChatListPage = () => {
 
   const handleCreateChat = (userId: string) => {
     // TODO: Create chat and navigate to it
-    navigate(`/chat/${userId}`);
+    navigate(`/male/chat/${userId}`);
   };
 
   const handleChatClick = (chatId: string) => {
-    navigate(`/chat/${chatId}`);
+    navigate(`/male/chat/${chatId}`);
   };
 
   const handleNavigationClick = (itemId: string) => {
     switch (itemId) {
       case 'discover':
-        navigate('/discover');
+        navigate('/male/discover');
         break;
       case 'chats':
-        navigate('/chats');
+        navigate('/male/chats');
         break;
       case 'wallet':
-        navigate('/wallet');
+        navigate('/male/wallet');
         break;
       case 'profile':
-        navigate('/my-profile');
+        navigate('/male/my-profile');
         break;
       default:
         break;

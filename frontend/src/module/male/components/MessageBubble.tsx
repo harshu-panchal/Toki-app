@@ -1,6 +1,7 @@
 import { MaterialSymbol } from '../types/material-symbol';
 import type { Message } from '../types/male.types';
 import { format } from 'date-fns';
+import { GiftMessageBubble } from './GiftMessageBubble';
 
 interface MessageBubbleProps {
   message: Message;
@@ -9,6 +10,20 @@ interface MessageBubbleProps {
 export const MessageBubble = ({ message }: MessageBubbleProps) => {
   const isSent = message.isSent;
   const time = format(message.timestamp, 'h:mm a');
+
+  // Handle gift messages
+  if (message.type === 'gift' && message.gifts && message.gifts.length > 0) {
+    return (
+      <GiftMessageBubble
+        gifts={message.gifts}
+        note={message.giftNote}
+        timestamp={message.timestamp}
+        isSent={isSent}
+        readStatus={message.readStatus}
+        cost={message.cost}
+      />
+    );
+  }
 
   const getReadStatusIcon = () => {
     if (!isSent || !message.readStatus) return null;

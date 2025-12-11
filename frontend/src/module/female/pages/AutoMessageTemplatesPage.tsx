@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MaterialSymbol } from '../types/material-symbol';
+import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { FemaleBottomNavigation } from '../components/FemaleBottomNavigation';
+import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
+import { FemaleSidebar } from '../components/FemaleSidebar';
+import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import type { AutoMessageTemplate } from '../types/female.types';
 
 // Mock data - replace with actual API calls
@@ -28,39 +31,18 @@ const mockTemplates: AutoMessageTemplate[] = [
   },
 ];
 
-const navigationItems = [
-  { id: 'dashboard', icon: 'home', label: 'Home' },
-  { id: 'chats', icon: 'chat_bubble', label: 'Chats' },
-  { id: 'earnings', icon: 'account_balance_wallet', label: 'Earnings' },
-  { id: 'profile', icon: 'person', label: 'Profile' },
-];
-
 export const AutoMessageTemplatesPage = () => {
   const navigate = useNavigate();
+  const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [templates, setTemplates] = useState<AutoMessageTemplate[]>(mockTemplates);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [newTemplate, setNewTemplate] = useState({ name: '', content: '', triggerType: 'time_based' as const, triggerCondition: '' });
-
-  const handleNavigationClick = (itemId: string) => {
-    switch (itemId) {
-      case 'dashboard':
-        navigate('/female/dashboard');
-        break;
-      case 'chats':
-        navigate('/female/chats');
-        break;
-      case 'earnings':
-        navigate('/female/earnings');
-        break;
-      case 'profile':
-        navigate('/female/my-profile');
-        break;
-      default:
-        break;
-    }
-  };
 
   const handleCreateTemplate = () => {
     if (!newTemplate.name || !newTemplate.content) {
@@ -135,6 +117,17 @@ export const AutoMessageTemplatesPage = () => {
 
   return (
     <div className="flex flex-col bg-background-light dark:bg-background-dark min-h-screen pb-20">
+      {/* Top Navbar */}
+      <FemaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
+
+      {/* Sidebar */}
+      <FemaleSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        items={navigationItems}
+        onItemClick={handleNavigationClick}
+      />
+
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
         <div className="flex items-center gap-3">

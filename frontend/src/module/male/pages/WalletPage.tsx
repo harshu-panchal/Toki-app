@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WalletHeader } from '../components/WalletHeader';
 import { WalletBalanceCard } from '../components/WalletBalanceCard';
@@ -79,6 +79,11 @@ const filterOptions = [
 
 export const WalletPage = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const [coinBalance] = useState(2450);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
@@ -104,16 +109,16 @@ export const WalletPage = () => {
   const handleNavigationClick = (itemId: string) => {
     switch (itemId) {
       case 'discover':
-        navigate('/discover');
+        navigate('/male/discover');
         break;
       case 'chats':
-        navigate('/chats');
+        navigate('/male/chats');
         break;
       case 'wallet':
-        navigate('/wallet');
+        navigate('/male/wallet');
         break;
       case 'profile':
-        navigate('/my-profile');
+        navigate('/male/my-profile');
         break;
       default:
         break;
@@ -121,7 +126,7 @@ export const WalletPage = () => {
   };
 
   const handleBuyCoins = () => {
-    navigate('/buy-coins');
+    navigate('/male/buy-coins');
   };
 
   const handleQuickAction = (actionId: string) => {
@@ -141,8 +146,7 @@ export const WalletPage = () => {
   };
 
   const handleSendGift = () => {
-    // TODO: Navigate to gift selection or handle gift sending
-    console.log('Send gift');
+    navigate('/male/gifts');
   };
 
   return (

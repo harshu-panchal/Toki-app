@@ -1,10 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { MaterialSymbol } from '../types/material-symbol';
 import { BottomNavigation } from '../components/BottomNavigation';
 import type { NearbyFemale } from '../types/male.types';
 
 // Mock data - replace with actual API call
-const mockProfiles: Record<string, NearbyFemale> = {
+const mockProfiles: Record<string, NearbyFemale & { photos?: string[]; interests?: string[]; bio?: string }> = {
   '1': {
     id: '1',
     name: 'Sarah',
@@ -14,6 +15,12 @@ const mockProfiles: Record<string, NearbyFemale> = {
     isOnline: true,
     occupation: 'Student',
     chatCost: 20,
+    bio: 'Love traveling and exploring new places! Looking for someone to share adventures with.',
+    interests: ['Travel', 'Photography', 'Music', 'Fitness'],
+    photos: [
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuBNnKyZLNWCV7B-XwKgjd9-bbG9ZSq583oYGij7uKTYk2Ah_9nkpqgsGSDu-FUgux5QDiLCTw_y9JxTBhkZjWAOOReMhlK98A_84vIsKaxQ0IUzZqkJ7-wnAv67HRuUVltC2QQzOfbTk1-OdjqC7SWT4iG-MXs81ePZK3x1mYOHabRqp4eH7yIfiX3tH-YMXSs1uWS41vrxzPC8_MJHasLGiUWINfHYQ7KF2jfo0n_Yo6qBJKr_qMrOBUdimUVVJdY46GD7L0v-oL4',
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuC81hkr7IkYx1ryaWF6XEKAw50xyRvJBGMogrF-zD5ChG66QAopPNWZvczWXWXasmarotX6xfLiXqIGT-HGa4N4mpnfl6tHPN16fBm5L0ebBFFR6YnfhOhNpt_PXB-rNdw4iozv00ERuqlCKno-B1P2UZ6g-dU5YY4Or_m3Xdgk4_MrxVK9o6Uz70Vr_fXQdMhSrjjCl7s_yQE_R1O9FNwroQqdfSFv6kiO76qVxmnHDhLrYwRWtfdSdegsNjAzgAdgkUZgUomw2j8',
+    ],
   },
   '2': {
     id: '2',
@@ -78,6 +85,10 @@ export const UserProfilePage = () => {
   const { profileId } = useParams<{ profileId: string }>();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [profileId]);
+
   const profile = profileId ? mockProfiles[profileId] : null;
 
   const handleBackClick = () => {
@@ -87,23 +98,23 @@ export const UserProfilePage = () => {
   const handleChatClick = () => {
     if (profile) {
       // Navigate to chat - create new chat or open existing
-      navigate(`/chat/${profile.id}`);
+      navigate(`/male/chat/${profile.id}`);
     }
   };
 
   const handleNavigationClick = (itemId: string) => {
     switch (itemId) {
       case 'discover':
-        navigate('/discover');
+        navigate('/male/discover');
         break;
       case 'chats':
-        navigate('/chats');
+        navigate('/male/chats');
         break;
       case 'wallet':
-        navigate('/wallet');
+        navigate('/male/wallet');
         break;
       case 'profile':
-        navigate('/my-profile');
+        navigate('/male/my-profile');
         break;
       default:
         break;
@@ -179,10 +190,45 @@ export const UserProfilePage = () => {
           {profile.occupation && (
             <p className="text-base text-gray-600 dark:text-gray-400 mt-1">{profile.occupation}</p>
           )}
-          {profile.bio && (
-            <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">{profile.bio}</p>
+          {(profile as any).bio && (
+            <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">{(profile as any).bio}</p>
           )}
         </div>
+
+        {/* Interests */}
+        {(profile as any).interests && (profile as any).interests.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Interests</h3>
+            <div className="flex flex-wrap gap-2">
+              {(profile as any).interests.map((interest: string, index: number) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium"
+                >
+                  {interest}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Photo Gallery */}
+        {(profile as any).photos && (profile as any).photos.length > 1 && (
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Photos</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {(profile as any).photos.slice(1).map((photo: string, index: number) => (
+                <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
+                  <img
+                    src={photo}
+                    alt={`Photo ${index + 2}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Chat Button */}
         <button

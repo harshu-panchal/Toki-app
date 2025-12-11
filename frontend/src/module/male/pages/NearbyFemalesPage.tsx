@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TopAppBar } from '../components/TopAppBar';
 import { FilterChips } from '../components/FilterChips';
@@ -81,6 +81,11 @@ const navigationItems = [
 
 export const NearbyFemalesPage = () => {
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
@@ -174,30 +179,30 @@ export const NearbyFemalesPage = () => {
 
   const handleChatClick = (profileId: string) => {
     // Navigate to chat - create new chat or open existing
-    navigate(`/chat/${profileId}`);
+    navigate(`/male/chat/${profileId}`);
   };
 
   const handleProfileClick = (profileId: string) => {
-    navigate(`/profile/${profileId}`);
+    navigate(`/male/profile/${profileId}`);
   };
 
   const handleGetCoinsClick = () => {
-    navigate('/buy-coins');
+    navigate('/male/buy-coins');
   };
 
   const handleNavigationClick = (itemId: string) => {
     switch (itemId) {
       case 'discover':
-        navigate('/discover');
+        navigate('/male/discover');
         break;
       case 'chats':
-        navigate('/chats');
+        navigate('/male/chats');
         break;
       case 'wallet':
-        navigate('/wallet');
+        navigate('/male/wallet');
         break;
       case 'profile':
-        navigate('/my-profile');
+        navigate('/male/my-profile');
         break;
       default:
         break;

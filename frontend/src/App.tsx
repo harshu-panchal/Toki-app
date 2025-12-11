@@ -10,6 +10,8 @@ import { NotificationsPage as MaleNotificationsPage } from './module/male/pages/
 import { PurchaseHistoryPage } from './module/male/pages/PurchaseHistoryPage';
 import { PaymentPage } from './module/male/pages/PaymentPage';
 import { MyProfilePage as MaleMyProfilePage } from './module/male/pages/MyProfilePage';
+import { GiftsPage } from './module/male/pages/GiftsPage';
+import { BadgesPage } from './module/male/pages/BadgesPage';
 
 // Female module imports
 import { FemaleDashboard } from './module/female/pages/FemaleDashboard';
@@ -21,27 +23,48 @@ import { AutoMessageTemplatesPage } from './module/female/pages/AutoMessageTempl
 import { MyProfilePage as FemaleMyProfilePage } from './module/female/pages/MyProfilePage';
 import { NotificationsPage as FemaleNotificationsPage } from './module/female/pages/NotificationsPage';
 import { UserProfilePage as FemaleUserProfilePage } from './module/female/pages/UserProfilePage';
+import { GiftTradingPage } from './module/female/pages/GiftTradingPage';
+import { GiftTradeFlowPage } from './module/female/pages/GiftTradeFlowPage';
 
 // Common pages
 import { NotFoundPage } from './pages/NotFoundPage';
+import { LandingPage } from './pages/LandingPage';
+
+// Auth pages
+import { SignupPage } from './module/auth/pages/SignupPage';
+import { LoginPage } from './module/auth/pages/LoginPage';
+import { BasicProfilePage } from './module/auth/pages/BasicProfilePage';
+import { PreferencesPage } from './module/auth/pages/PreferencesPage';
+import { InterestsPage } from './module/auth/pages/InterestsPage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Landing page */}
+        <Route path="/" element={<LandingPage />} />
+        
+        {/* Auth routes */}
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/onboarding/basic-profile" element={<BasicProfilePage />} />
+        <Route path="/onboarding/preferences" element={<PreferencesPage />} />
+        <Route path="/onboarding/interests" element={<InterestsPage />} />
+        
         {/* Male Routes */}
-        <Route path="/" element={<MaleDashboard />} />
-        <Route path="/dashboard" element={<MaleDashboard />} />
-        <Route path="/discover" element={<NearbyFemalesPage />} />
-        <Route path="/chats" element={<MaleChatListPage />} />
-        <Route path="/chat/:chatId" element={<MaleChatWindowPage />} />
-        <Route path="/wallet" element={<WalletPage />} />
-        <Route path="/buy-coins" element={<CoinPurchasePage />} />
-        <Route path="/profile/:profileId" element={<UserProfilePage />} />
-        <Route path="/notifications" element={<MaleNotificationsPage />} />
-        <Route path="/purchase-history" element={<PurchaseHistoryPage />} />
-        <Route path="/payment/:planId" element={<PaymentPage />} />
-        <Route path="/my-profile" element={<MaleMyProfilePage />} />
+        <Route path="/male/dashboard" element={<MaleDashboard />} />
+        <Route path="/male/discover" element={<NearbyFemalesPage />} />
+        <Route path="/male/chats" element={<MaleChatListPage />} />
+        <Route path="/male/chat/:chatId" element={<MaleChatWindowPage />} />
+        <Route path="/male/wallet" element={<WalletPage />} />
+        <Route path="/male/buy-coins" element={<CoinPurchasePage />} />
+        <Route path="/male/profile/:profileId" element={<UserProfilePage />} />
+        <Route path="/male/notifications" element={<MaleNotificationsPage />} />
+        <Route path="/male/purchase-history" element={<PurchaseHistoryPage />} />
+        <Route path="/male/payment/:planId" element={<PaymentPage />} />
+        <Route path="/male/my-profile" element={<MaleMyProfilePage />} />
+        <Route path="/male/gifts" element={<GiftsPage />} />
+        <Route path="/male/badges" element={<BadgesPage />} />
 
         {/* Female Routes */}
         <Route path="/female/dashboard" element={<FemaleDashboard />} />
@@ -50,9 +73,11 @@ function App() {
         <Route path="/female/earnings" element={<EarningsPage />} />
         <Route path="/female/withdrawal" element={<WithdrawalPage />} />
         <Route path="/female/auto-messages" element={<AutoMessageTemplatesPage />} />
-        <Route path="/female/my-profile" element={<FemaleMyProfilePage />} />
-        <Route path="/female/notifications" element={<FemaleNotificationsPage />} />
-        <Route path="/female/profile/:profileId" element={<FemaleUserProfilePage />} />
+            <Route path="/female/my-profile" element={<FemaleMyProfilePage />} />
+            <Route path="/female/notifications" element={<FemaleNotificationsPage />} />
+            <Route path="/female/profile/:profileId" element={<FemaleUserProfilePage />} />
+            <Route path="/female/trade-gifts" element={<GiftTradingPage />} />
+            <Route path="/female/trade-gifts/flow" element={<GiftTradeFlowPage />} />
 
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFoundPage />} />

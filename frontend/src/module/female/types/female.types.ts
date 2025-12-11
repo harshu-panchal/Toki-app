@@ -37,6 +37,20 @@ export interface FemaleDashboardData {
   activeChats: Chat[];
 }
 
+export interface Gift {
+  id: string;
+  name: string;
+  icon: string;
+  cost: number; // Original cost in coins
+  tradeValue: number; // Value when traded for money (per unit)
+  description?: string;
+  category?: 'romantic' | 'fun' | 'luxury' | 'special';
+  receivedAt: Date; // When the gift was received
+  senderId?: string; // Who sent the gift
+  senderName?: string;
+  quantity?: number; // Number of this gift (default: 1)
+}
+
 export interface Message {
   id: string;
   chatId: string;
@@ -45,9 +59,11 @@ export interface Message {
   senderAvatar?: string;
   content: string;
   timestamp: Date;
-  type: 'text' | 'image' | 'photo';
+  type: 'text' | 'image' | 'photo' | 'gift';
   isSent: boolean; // true if sent by current user, false if received
   readStatus?: 'sent' | 'delivered' | 'read';
+  gifts?: Gift[]; // For gift messages
+  giftNote?: string; // Optional note with gifts
 }
 
 export interface EarningsBreakdown {
@@ -89,7 +105,7 @@ export interface AutoMessageTemplate {
 
 export interface Notification {
   id: string;
-  type: 'earnings' | 'message' | 'withdrawal' | 'system' | 'video_call';
+  type: 'earnings' | 'message' | 'withdrawal' | 'system' | 'video_call' | 'gift';
   title: string;
   message: string;
   timestamp: string;
@@ -98,6 +114,16 @@ export interface Notification {
   relatedUserId?: string;
   relatedChatId?: string;
   actionUrl?: string;
+}
+
+export interface GiftTrade {
+  id: string;
+  giftId: string;
+  giftName: string;
+  giftIcon: string;
+  tradeValue: number;
+  tradedAt: Date;
+  status: 'completed';
 }
 
 

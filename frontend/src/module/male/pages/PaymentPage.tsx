@@ -42,6 +42,10 @@ const mockCoinPlans: Record<string, CoinPlan> = {
 export const PaymentPage = () => {
   const { planId } = useParams<{ planId: string }>();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [planId]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>(
     'idle'
@@ -51,7 +55,7 @@ export const PaymentPage = () => {
 
   useEffect(() => {
     if (!plan) {
-      navigate('/buy-coins');
+      navigate('/male/buy-coins');
     }
   }, [plan, navigate]);
 
@@ -69,13 +73,13 @@ export const PaymentPage = () => {
 
       // Redirect to wallet after 2 seconds
       setTimeout(() => {
-        navigate('/wallet');
+        navigate('/male/wallet');
       }, 2000);
     }, 2000);
   };
 
   const handleCancel = () => {
-    navigate('/buy-coins');
+    navigate('/male/buy-coins');
   };
 
   if (!plan) {

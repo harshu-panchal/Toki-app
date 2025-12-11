@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MaterialSymbol } from '../types/material-symbol';
+import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { FemaleBottomNavigation } from '../components/FemaleBottomNavigation';
+import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
+import { FemaleSidebar } from '../components/FemaleSidebar';
+import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import type { Withdrawal } from '../types/female.types';
 
 // Mock data - replace with actual API calls
@@ -31,15 +34,13 @@ const mockWithdrawals: Withdrawal[] = [
   },
 ];
 
-const navigationItems = [
-  { id: 'dashboard', icon: 'home', label: 'Home' },
-  { id: 'chats', icon: 'chat_bubble', label: 'Chats' },
-  { id: 'earnings', icon: 'account_balance_wallet', label: 'Earnings' },
-  { id: 'profile', icon: 'person', label: 'Profile' },
-];
-
 export const WithdrawalPage = () => {
   const navigate = useNavigate();
+  const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>(mockWithdrawals);
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'bank' | 'upi'>('bank');
@@ -53,25 +54,6 @@ export const WithdrawalPage = () => {
   const [upiId, setUpiId] = useState('');
   const availableBalance = 12450;
   const minWithdrawal = 1000;
-
-  const handleNavigationClick = (itemId: string) => {
-    switch (itemId) {
-      case 'dashboard':
-        navigate('/female/dashboard');
-        break;
-      case 'chats':
-        navigate('/female/chats');
-        break;
-      case 'earnings':
-        navigate('/female/earnings');
-        break;
-      case 'profile':
-        navigate('/female/my-profile');
-        break;
-      default:
-        break;
-    }
-  };
 
   const handleContinue = () => {
     const withdrawAmount = parseInt(amount);
@@ -137,6 +119,17 @@ export const WithdrawalPage = () => {
 
   return (
     <div className="flex flex-col bg-background-light dark:bg-background-dark min-h-screen pb-20">
+      {/* Top Navbar */}
+      <FemaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
+
+      {/* Sidebar */}
+      <FemaleSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        items={navigationItems}
+        onItemClick={handleNavigationClick}
+      />
+
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
         <div className="flex items-center gap-3">

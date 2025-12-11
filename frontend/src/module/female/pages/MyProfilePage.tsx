@@ -1,18 +1,19 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MaterialSymbol } from '../types/material-symbol';
+import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { FemaleBottomNavigation } from '../components/FemaleBottomNavigation';
-
-const navigationItems = [
-  { id: 'dashboard', icon: 'home', label: 'Home' },
-  { id: 'chats', icon: 'chat_bubble', label: 'Chats' },
-  { id: 'earnings', icon: 'account_balance_wallet', label: 'Earnings' },
-  { id: 'profile', icon: 'person', label: 'Profile', isActive: true },
-];
+import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
+import { FemaleSidebar } from '../components/FemaleSidebar';
+import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 
 export const MyProfilePage = () => {
   const navigate = useNavigate();
+  const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('Emma');
   const [age, setAge] = useState(24);
@@ -38,24 +39,6 @@ export const MyProfilePage = () => {
     'https://lh3.googleusercontent.com/aida-public/AB6AXuBNnKyZLNWCV7B-XwKgjd9-bbG9ZSq583oYGij7uKTYk2Ah_9nkpqgsGSDu-FUgux5QDiLCTw_y9JxTBhkZjWAOOReMhlK98A_84vIsKaxQ0IUzZqkJ7-wnAv67HRuUVltC2QQzOfbTk1-OdjqC7SWT4iG-MXs81ePZK3x1mYOHabRqp4eH7yIfiX3tH-YMXSs1uWS41vrxzPC8_MJHasLGiUWINfHYQ7KF2jfo0n_Yo6qBJKr_qMrOBUdimUVVJdY46GD7L0v-oL4',
   ]);
 
-  const handleNavigationClick = (itemId: string) => {
-    switch (itemId) {
-      case 'dashboard':
-        navigate('/female/dashboard');
-        break;
-      case 'chats':
-        navigate('/female/chats');
-        break;
-      case 'earnings':
-        navigate('/female/earnings');
-        break;
-      case 'profile':
-        navigate('/female/my-profile');
-        break;
-      default:
-        break;
-    }
-  };
 
   const handleSave = () => {
     // TODO: Implement save profile
@@ -103,6 +86,17 @@ export const MyProfilePage = () => {
 
   return (
     <div className="flex flex-col bg-background-light dark:bg-background-dark min-h-screen pb-20">
+      {/* Top Navbar */}
+      <FemaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
+
+      {/* Sidebar */}
+      <FemaleSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        items={navigationItems}
+        onItemClick={handleNavigationClick}
+      />
+
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
         <div className="flex items-center gap-3">

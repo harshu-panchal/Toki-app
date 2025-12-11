@@ -2,10 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChatWindowHeader } from '../components/ChatWindowHeader';
 import { MessageBubble } from '../components/MessageBubble';
+import { GiftMessageBubble } from '../components/GiftMessageBubble';
 import { MessageInput } from '../components/MessageInput';
 import { PhotoPickerModal } from '../components/PhotoPickerModal';
 import { ChatMoreOptionsModal } from '../components/ChatMoreOptionsModal';
-import type { Message } from '../types/female.types';
+import { FemaleBottomNavigation } from '../components/FemaleBottomNavigation';
+import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
+import type { Message, Gift } from '../types/female.types';
 
 // Mock data - replace with actual API calls
 const mockChats: Record<string, { userId: string; userName: string; userAvatar: string; isOnline: boolean }> = {
@@ -62,8 +65,34 @@ const getMockMessages = (chatId: string): Message[] => {
         chatId: '1',
         senderId: 'other',
         senderName: 'Alex',
-        content: "I'm doing great! Thanks for asking!",
+        content: '',
         timestamp: new Date(Date.now() - 3000000),
+        type: 'gift',
+        isSent: false,
+        gifts: [
+          {
+            id: 'gift-1',
+            name: 'Rose',
+            icon: 'local_florist',
+            cost: 50,
+            tradeValue: 25,
+            description: 'A beautiful rose',
+            category: 'romantic',
+            receivedAt: new Date(Date.now() - 3000000),
+            senderId: '1',
+            senderName: 'Alex',
+            quantity: 4, // 4 roses
+          },
+        ],
+        giftNote: 'Hope you like this! 🌹',
+      },
+      {
+        id: '1-4',
+        chatId: '1',
+        senderId: 'other',
+        senderName: 'Alex',
+        content: "I'm doing great! Thanks for asking!",
+        timestamp: new Date(Date.now() - 2700000),
         type: 'text',
         isSent: false,
       },
@@ -90,6 +119,32 @@ const getMockMessages = (chatId: string): Message[] => {
         isSent: true,
         readStatus: 'read',
       },
+      {
+        id: '2-3',
+        chatId: '2',
+        senderId: 'other',
+        senderName: 'Michael',
+        content: '',
+        timestamp: new Date(Date.now() - 6600000),
+        type: 'gift',
+        isSent: false,
+        gifts: [
+          {
+            id: 'gift-2',
+            name: 'Chocolate',
+            icon: 'cake',
+            cost: 100,
+            tradeValue: 50,
+            description: 'Sweet chocolate',
+            category: 'romantic',
+            receivedAt: new Date(Date.now() - 6600000),
+            senderId: '2',
+            senderName: 'Michael',
+            quantity: 3, // 3 chocolates
+          },
+        ],
+        giftNote: 'Hope you enjoy these! 🍫',
+      },
     ],
     '3': [
       {
@@ -111,6 +166,11 @@ const getMockMessages = (chatId: string): Message[] => {
 export const ChatWindowPage = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
+  const { navigationItems, handleNavigationClick } = useFemaleNavigation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [chatId]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isPhotoPickerOpen, setIsPhotoPickerOpen] = useState(false);
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
@@ -221,7 +281,7 @@ export const ChatWindowPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark overflow-hidden">
+    <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark overflow-hidden pb-20">
       {/* Header */}
       <ChatWindowHeader
         userName={chatInfo.userName}
@@ -231,9 +291,19 @@ export const ChatWindowPage = () => {
       />
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto py-4">
+      <div className="flex-1 overflow-y-auto py-4 min-h-0">
         {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
+          message.type === 'gift' && message.gifts ? (
+            <GiftMessageBubble
+              key={message.id}
+              gifts={message.gifts}
+              note={message.giftNote}
+              timestamp={message.timestamp}
+              senderName={message.senderName}
+            />
+          ) : (
+            <MessageBubble key={message.id} message={message} />
+          )
         ))}
         <div ref={messagesEndRef} />
       </div>
@@ -262,6 +332,9 @@ export const ChatWindowPage = () => {
         onDelete={handleDelete}
         userName={chatInfo.userName}
       />
+
+      {/* Bottom Navigation */}
+      <FemaleBottomNavigation items={navigationItems} onItemClick={handleNavigationClick} />
     </div>
   );
 };

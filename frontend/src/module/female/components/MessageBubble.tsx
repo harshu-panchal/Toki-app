@@ -1,4 +1,4 @@
-import { MaterialSymbol } from '../types/material-symbol';
+import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import type { Message } from '../types/female.types';
 import { format } from 'date-fns';
 

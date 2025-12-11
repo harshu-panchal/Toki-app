@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { WalletBalance } from '../components/WalletBalance';
@@ -6,6 +6,7 @@ import { StatsGrid } from '../components/StatsGrid';
 import { DiscoverNearbyCard } from '../components/DiscoverNearbyCard';
 import { ActiveChatsList } from '../components/ActiveChatsList';
 import { BottomNavigation } from '../components/BottomNavigation';
+import { QuickActionsGrid } from '../components/QuickActionsGrid';
 import type { MaleDashboardData } from '../types/male.types';
 
 // Mock data - replace with actual API calls
@@ -81,42 +82,62 @@ const navigationItems = [
 export const MaleDashboard = () => {
   const [dashboardData] = useState<MaleDashboardData>(mockDashboardData);
 
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const handleNotificationClick = () => {
-    navigate('/notifications');
+    navigate('/male/notifications');
   };
 
   const handleTopUpClick = () => {
-    // TODO: Navigate to coin purchase page
-    console.log('Top Up clicked');
+    navigate('/male/buy-coins');
   };
 
-  const navigate = useNavigate();
+  const handleQuickActionClick = (actionId: string) => {
+    switch (actionId) {
+      case 'buy-coins':
+        navigate('/male/buy-coins');
+        break;
+      case 'vip':
+        // TODO: Navigate to VIP membership page
+        console.log('VIP membership');
+        break;
+      case 'send-gift':
+        navigate('/male/gifts');
+        break;
+      default:
+        break;
+    }
+  };
 
   const handleExploreClick = () => {
-    navigate('/discover');
+    navigate('/male/discover');
   };
 
   const handleChatClick = (chatId: string) => {
-    navigate(`/chat/${chatId}`);
+    navigate(`/male/chat/${chatId}`);
   };
 
   const handleSeeAllChatsClick = () => {
-    navigate('/chats');
+    navigate('/male/chats');
   };
 
   const handleNavigationClick = (itemId: string) => {
     switch (itemId) {
       case 'discover':
-        navigate('/discover');
+        navigate('/male/discover');
         break;
       case 'chats':
-        navigate('/chats');
+        navigate('/male/chats');
         break;
       case 'wallet':
-        navigate('/wallet');
+        navigate('/male/wallet');
         break;
       case 'profile':
-        navigate('/my-profile');
+        navigate('/male/my-profile');
         break;
       default:
         break;
@@ -142,6 +163,36 @@ export const MaleDashboard = () => {
 
       {/* Stats Grid */}
       <StatsGrid stats={dashboardData.stats} />
+
+      {/* Quick Actions Grid */}
+      <div className="px-4 mb-4">
+        <QuickActionsGrid
+          actions={[
+            {
+              id: 'buy-coins',
+              icon: 'monetization_on',
+              label: 'Buy Coins',
+              iconColor: 'text-primary',
+              iconBgColor: 'bg-primary/10',
+            },
+            {
+              id: 'vip',
+              icon: 'card_membership',
+              label: 'VIP Membership',
+              iconColor: 'text-purple-500',
+              iconBgColor: 'bg-purple-500/10',
+            },
+            {
+              id: 'send-gift',
+              icon: 'redeem',
+              label: 'Send Gift',
+              iconColor: 'text-pink-500',
+              iconBgColor: 'bg-pink-500/10',
+            },
+          ]}
+          onActionClick={handleQuickActionClick}
+        />
+      </div>
 
       {/* Discover Nearby Card */}
       <DiscoverNearbyCard

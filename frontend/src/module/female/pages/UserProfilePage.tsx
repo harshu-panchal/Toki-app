@@ -1,6 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { MaterialSymbol } from '../types/material-symbol';
+import { useEffect } from 'react';
+import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { FemaleBottomNavigation } from '../components/FemaleBottomNavigation';
+import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
+import { FemaleSidebar } from '../components/FemaleSidebar';
+import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 
 // Mock data - replace with actual API call
 interface UserProfile {
@@ -50,16 +54,14 @@ const mockProfiles: Record<string, UserProfile> = {
   },
 };
 
-const navigationItems = [
-  { id: 'dashboard', icon: 'home', label: 'Home' },
-  { id: 'chats', icon: 'chat_bubble', label: 'Chats' },
-  { id: 'earnings', icon: 'account_balance_wallet', label: 'Earnings' },
-  { id: 'profile', icon: 'person', label: 'Profile' },
-];
-
 export const UserProfilePage = () => {
   const { profileId } = useParams<{ profileId: string }>();
   const navigate = useNavigate();
+  const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [profileId]);
 
   const profile = profileId ? mockProfiles[profileId] : null;
 
@@ -71,25 +73,6 @@ export const UserProfilePage = () => {
     if (profile) {
       // Navigate to chat - create new chat or open existing
       navigate(`/female/chat/${profile.id}`);
-    }
-  };
-
-  const handleNavigationClick = (itemId: string) => {
-    switch (itemId) {
-      case 'dashboard':
-        navigate('/female/dashboard');
-        break;
-      case 'chats':
-        navigate('/female/chats');
-        break;
-      case 'earnings':
-        navigate('/female/earnings');
-        break;
-      case 'profile':
-        navigate('/female/my-profile');
-        break;
-      default:
-        break;
     }
   };
 
@@ -113,8 +96,19 @@ export const UserProfilePage = () => {
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-white pb-20 min-h-screen">
+      {/* Top Navbar */}
+      <FemaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
+
+      {/* Sidebar */}
+      <FemaleSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        items={navigationItems}
+        onItemClick={handleNavigationClick}
+      />
+
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-black/5 dark:border-white/5">
+      <header className="sticky top-[57px] z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-black/5 dark:border-white/5">
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={handleBackClick}

@@ -168,6 +168,10 @@ userSchema.index({ role: 1, isActive: 1 });
 userSchema.index({ 'profile.location.coordinates': '2dsphere' }); // For geospatial queries
 userSchema.index({ isOnline: 1, lastSeen: -1 });
 userSchema.index({ coinBalance: -1 });
+// Compound index for discover females query (approved females sorted by lastSeen)
+userSchema.index({ role: 1, approvalStatus: 1, isBlocked: 1, lastSeen: -1 });
+userSchema.index({ role: 1, approvalStatus: 1, isBlocked: 1, createdAt: -1 });
+userSchema.index({ role: 1, approvalStatus: 1, isBlocked: 1, isOnline: 1 });
 
 // Virtual: Full name
 userSchema.virtual('fullName').get(function () {

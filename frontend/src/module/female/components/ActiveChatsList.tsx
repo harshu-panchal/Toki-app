@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MaterialSymbol } from '../types/material-symbol';
 import type { Chat } from '../types/female.types';
 

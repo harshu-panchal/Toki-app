@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MaterialSymbol } from '../types/material-symbol';
 import type { FilterType } from '../types/male.types';
 

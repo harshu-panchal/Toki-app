@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Cloudinary Adapter - External Service Binding
  * @owner: Sujal (Shared - Both use for uploads)

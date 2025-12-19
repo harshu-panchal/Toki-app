@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './core/context/AuthContext';
 import { SocketProvider } from './core/context/SocketContext';
 import { GlobalStateProvider } from './core/context/GlobalStateContext';
@@ -13,6 +13,7 @@ import { NotificationsPage as MaleNotificationsPage } from './module/male/pages/
 import { PurchaseHistoryPage } from './module/male/pages/PurchaseHistoryPage';
 import { PaymentPage } from './module/male/pages/PaymentPage';
 import { MyProfilePage as MaleMyProfilePage } from './module/male/pages/MyProfilePage';
+import { MaleProfileEditPage } from './module/male/pages/MaleProfileEditPage';
 import { GiftsPage } from './module/male/pages/GiftsPage';
 import { BadgesPage } from './module/male/pages/BadgesPage';
 
@@ -47,7 +48,6 @@ import { SettingsPage } from './module/admin/pages/SettingsPage';
 
 // Common pages
 import { NotFoundPage } from './pages/NotFoundPage';
-import { LandingPage } from './pages/LandingPage';
 
 // Auth pages
 import { SignupPage } from './module/auth/pages/SignupPage';
@@ -64,8 +64,8 @@ function App() {
         <GlobalStateProvider>
           <BrowserRouter>
             <Routes>
-              {/* Landing page */}
-              <Route path="/" element={<LandingPage />} />
+              {/* Landing page → default to Discover */}
+              <Route path="/" element={<Navigate to="/male/discover" replace />} />
 
               {/* Auth routes */}
               <Route path="/signup" element={<SignupPage />} />
@@ -87,6 +87,7 @@ function App() {
               <Route path="/male/purchase-history" element={<PurchaseHistoryPage />} />
               <Route path="/male/payment/:planId" element={<PaymentPage />} />
               <Route path="/male/my-profile" element={<MaleMyProfilePage />} />
+              <Route path="/male/my-profile/profile" element={<MaleProfileEditPage />} />
               <Route path="/male/gifts" element={<GiftsPage />} />
               <Route path="/male/badges" element={<BadgesPage />} />
 

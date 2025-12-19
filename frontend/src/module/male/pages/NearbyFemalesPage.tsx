@@ -1,18 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TopAppBar } from '../components/TopAppBar';
-import { FilterChips } from '../components/FilterChips';
-import { FilterPanel, type FilterOptions } from '../components/FilterPanel';
-import { ProfileCard } from '../components/ProfileCard';
-import { FloatingActionButton } from '../components/FloatingActionButton';
 import { BottomNavigation } from '../components/BottomNavigation';
-import { MaleTopNavbar } from '../components/MaleTopNavbar';
-import { MaleSidebar } from '../components/MaleSidebar';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import type { NearbyFemale, FilterType } from '../types/male.types';
 
 // Mock data - replace with actual API calls
-const mockProfiles: NearbyFemale[] = [
+const recommendedProfiles: NearbyFemale[] = [
   {
     id: '1',
     name: 'Sarah',
@@ -73,109 +66,262 @@ const mockProfiles: NearbyFemale[] = [
     occupation: 'Traveler',
     chatCost: 20,
   },
+  {
+    id: '7',
+    name: 'Ananya',
+    age: 23,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '6.2 km',
+    isOnline: true,
+    bio: 'Foodie & runner',
+    chatCost: 20,
+  },
+  {
+    id: '8',
+    name: 'Shreya',
+    age: 24,
+    avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
+    distance: '7.5 km',
+    isOnline: true,
+    occupation: 'Engineer',
+    chatCost: 20,
+  },
+];
+
+const nearbyProfiles: NearbyFemale[] = [
+  {
+    id: 'n1',
+    name: 'Emily',
+    age: 21,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '500 m',
+    isOnline: true,
+    bio: 'New here 👋',
+    chatCost: 20,
+  },
+  {
+    id: 'n2',
+    name: 'Priya',
+    age: 20,
+    avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
+    distance: '1.2 km',
+    isOnline: true,
+    occupation: 'Student',
+    chatCost: 20,
+  },
+  {
+    id: 'n3',
+    name: 'Chloe',
+    age: 24,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '2.5 km',
+    isOnline: false,
+    occupation: 'Model',
+    chatCost: 20,
+  },
+  {
+    id: 'n4',
+    name: 'Isha',
+    age: 22,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '3.1 km',
+    isOnline: true,
+    bio: 'Coffee lover ☕',
+    chatCost: 20,
+  },
+  {
+    id: 'n5',
+    name: 'Riya',
+    age: 23,
+    avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
+    distance: '4 km',
+    isOnline: false,
+    occupation: 'Photographer',
+    chatCost: 20,
+  },
+  {
+    id: 'n6',
+    name: 'Sana',
+    age: 25,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '4.8 km',
+    isOnline: true,
+    occupation: 'Content Creator',
+    chatCost: 20,
+  },
+  {
+    id: 'n7',
+    name: 'Diya',
+    age: 24,
+    avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
+    distance: '5.1 km',
+    isOnline: false,
+    bio: 'Yoga & books',
+    chatCost: 20,
+  },
+  {
+    id: 'n8',
+    name: 'Zara',
+    age: 22,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '5.9 km',
+    isOnline: true,
+    occupation: 'Student',
+    chatCost: 20,
+  },
+];
+
+const newProfiles: NearbyFemale[] = [
+  {
+    id: 'new1',
+    name: 'Meera',
+    age: 22,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '3 km',
+    isOnline: true,
+    bio: 'Just joined! ✨',
+    chatCost: 20,
+  },
+  {
+    id: 'new2',
+    name: 'Aisha',
+    age: 23,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '4 km',
+    isOnline: false,
+    occupation: 'Artist',
+    chatCost: 20,
+  },
+  {
+    id: 'new3',
+    name: 'Jia',
+    age: 21,
+    avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
+    distance: '2.2 km',
+    isOnline: true,
+    bio: 'Explorer | Reader',
+    chatCost: 20,
+  },
+  {
+    id: 'new4',
+    name: 'Mitali',
+    age: 24,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '3.8 km',
+    isOnline: true,
+    occupation: 'Designer',
+    chatCost: 20,
+  },
+  {
+    id: 'new5',
+    name: 'Tara',
+    age: 22,
+    avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
+    distance: '2.9 km',
+    isOnline: false,
+    bio: 'Coffee + art',
+    chatCost: 20,
+  },
+  {
+    id: 'new6',
+    name: 'Kritika',
+    age: 23,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '3.3 km',
+    isOnline: true,
+    occupation: 'Analyst',
+    chatCost: 20,
+  },
+];
+
+const hotProfiles: NearbyFemale[] = [
+  {
+    id: 'hot1',
+    name: 'Nandni',
+    age: 24,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '1.3 km',
+    isOnline: true,
+    occupation: 'VIP',
+    chatCost: 20,
+  },
+  {
+    id: 'hot2',
+    name: 'Nancy',
+    age: 21,
+    avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
+    distance: '2 km',
+    isOnline: true,
+    occupation: 'VIP',
+    chatCost: 20,
+  },
+  {
+    id: 'hot3',
+    name: 'Pooja',
+    age: 22,
+    avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
+    distance: '2.8 km',
+    isOnline: true,
+    bio: 'Verified ⭐',
+    chatCost: 20,
+  },
+  {
+    id: 'hot4',
+    name: 'Anu',
+    age: 23,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '3.2 km',
+    isOnline: false,
+    occupation: 'Model',
+    chatCost: 20,
+  },
+  {
+    id: 'hot5',
+    name: 'Avni',
+    age: 24,
+    avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
+    distance: '3.9 km',
+    isOnline: true,
+    occupation: 'VIP',
+    chatCost: 20,
+  },
+  {
+    id: 'hot6',
+    name: 'Ritu',
+    age: 25,
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80',
+    distance: '4.1 km',
+    isOnline: true,
+    bio: 'Top picks today',
+    chatCost: 20,
+  },
 ];
 
 export const NearbyFemalesPage = () => {
   const navigate = useNavigate();
-  const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
-  
+  const { navigationItems, handleNavigationClick } = useMaleNavigation();
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
-  const [filterOptions, setFilterOptions] = useState<FilterOptions>({
-    ageRange: { min: 18, max: 50 },
-    maxDistance: 50,
-    onlineOnly: false,
-    verifiedOnly: false,
-  });
 
   const filteredProfiles = useMemo(() => {
-    let profiles = mockProfiles;
-
-    // Apply filter chips
     switch (activeFilter) {
-      case 'online':
-        profiles = profiles.filter((profile) => profile.isOnline);
-        break;
+      case 'nearby':
+        return nearbyProfiles;
       case 'new':
-        profiles = profiles.filter((profile) => profile.bio?.includes('New here'));
-        break;
+        return newProfiles;
       case 'popular':
-        // Mock: could be based on views, matches, etc.
-        profiles = profiles.slice(0, 3);
-        break;
+        return hotProfiles;
+      case 'all':
       default:
-        break;
+        return recommendedProfiles;
     }
-
-    // Apply advanced filters
-    profiles = profiles.filter((profile) => {
-      // Age filter
-      if (profile.age < filterOptions.ageRange.min || profile.age > filterOptions.ageRange.max) {
-        return false;
-      }
-
-      // Distance filter (parse distance string like "1.2 km" or "500 m")
-      const distanceStr = profile.distance.toLowerCase();
-      let distanceKm = 0;
-      if (distanceStr.includes('km')) {
-        distanceKm = parseFloat(distanceStr.replace('km', '').trim());
-      } else if (distanceStr.includes('m')) {
-        distanceKm = parseFloat(distanceStr.replace('m', '').trim()) / 1000;
-      }
-      if (distanceKm > filterOptions.maxDistance) {
-        return false;
-      }
-
-      // Online only filter
-      if (filterOptions.onlineOnly && !profile.isOnline) {
-        return false;
-      }
-
-      // Verified only filter (mock - assume some profiles are verified)
-      // In real app, this would check a verified property
-      if (filterOptions.verifiedOnly) {
-        // Mock: consider profiles with occupation as verified
-        if (!profile.occupation) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    // Apply search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      profiles = profiles.filter((profile) => {
-        const nameMatch = profile.name.toLowerCase().includes(query);
-        const occupationMatch = profile.occupation?.toLowerCase().includes(query);
-        const bioMatch = profile.bio?.toLowerCase().includes(query);
-        return nameMatch || occupationMatch || bioMatch;
-      });
-    }
-
-    return profiles;
-  }, [activeFilter, searchQuery, filterOptions]);
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
-
-  const handleFilterClick = () => {
-    setIsFilterPanelOpen(true);
-  };
-
-  const handleFilterApply = (filters: FilterOptions) => {
-    setFilterOptions(filters);
-  };
+  }, [activeFilter]);
 
   const handleChatClick = (profileId: string) => {
-    // Navigate to chat - create new chat or open existing
     navigate(`/male/chat/${profileId}`);
   };
 
@@ -183,73 +329,88 @@ export const NearbyFemalesPage = () => {
     navigate(`/male/profile/${profileId}`);
   };
 
-  const handleGetCoinsClick = () => {
-    navigate('/male/buy-coins');
-  };
-
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-white pb-24 min-h-screen">
-      {/* Top Navbar */}
-      <MaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
+    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-white flex flex-col">
+      {/* Tabs / Filters */}
+      <div className="sticky top-0 z-30 bg-gradient-to-r from-pink-50/95 via-rose-50/95 to-pink-50/95 dark:from-[#1a0f14]/95 dark:via-[#2d1a24]/95 dark:to-[#1a0f14]/95 backdrop-blur-md border-b border-pink-200/40 dark:border-pink-900/30 px-3 py-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 text-[13px] font-semibold">
+            <button
+              className={`pb-1 ${activeFilter === 'all' ? 'text-slate-900 dark:text-white border-b-2 border-primary' : 'text-slate-500 dark:text-slate-400'}`}
+              onClick={() => setActiveFilter('all')}
+            >
+              Recommend
+            </button>
+            <button
+              className={`pb-1 ${activeFilter === 'nearby' ? 'text-slate-900 dark:text-white border-b-2 border-primary' : 'text-slate-500 dark:text-slate-400'}`}
+              onClick={() => setActiveFilter('nearby' as FilterType)}
+            >
+              Nearby
+            </button>
+            <button
+              className={`pb-1 ${activeFilter === 'new' ? 'text-slate-900 dark:text-white border-b-2 border-primary' : 'text-slate-500 dark:text-slate-400'}`}
+              onClick={() => setActiveFilter('new')}
+            >
+              New
+            </button>
+            <button
+              className={`pb-1 ${activeFilter === 'popular' ? 'text-slate-900 dark:text-white border-b-2 border-primary' : 'text-slate-500 dark:text-slate-400'}`}
+              onClick={() => setActiveFilter('popular')}
+            >
+              Hot
+            </button>
+          </div>
+          <div className="w-12" />
+        </div>
+      </div>
 
-      {/* Sidebar */}
-      <MaleSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        items={navigationItems}
-        onItemClick={handleNavigationClick}
-      />
-
-      {/* Top App Bar */}
-      <TopAppBar
-        title="Nearby"
-        icon="favorite"
-        onFilterClick={handleFilterClick}
-        onSearch={handleSearch}
-      />
-
-      {/* Filter Chips */}
-      <FilterChips activeFilter={activeFilter} onFilterChange={setActiveFilter} />
-
-      {/* Filter Panel */}
-      <FilterPanel
-        isOpen={isFilterPanelOpen}
-        onClose={() => setIsFilterPanelOpen(false)}
-        onApply={handleFilterApply}
-        initialFilters={filterOptions}
-      />
-
-      {/* Main Content: Profile Grid */}
-      <main className="p-3">
-        {filteredProfiles.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 pb-4">
-            {filteredProfiles.map((profile) => (
-              <ProfileCard
-                key={profile.id}
-                profile={profile}
-                onChatClick={handleChatClick}
-                onProfileClick={handleProfileClick}
+      {/* Main Content: Profile List */}
+      <main className="p-3 space-y-2 pb-24">
+        {filteredProfiles.map((profile) => (
+          <div
+            key={profile.id}
+            className="bg-white dark:bg-[#2d1a24] rounded-2xl shadow-sm border border-pink-100/60 dark:border-pink-900/30 px-3 py-2.5 flex items-center gap-3"
+          >
+            <div className="relative">
+              <img
+                src={profile.avatar}
+                alt={profile.name}
+                className="h-12 w-12 rounded-xl object-cover border border-pink-100 dark:border-pink-800"
+                onClick={() => handleProfileClick(profile.id)}
               />
-            ))}
+              {profile.isOnline && (
+                <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-green-400 ring-2 ring-white dark:ring-[#2d1a24]" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold truncate">{profile.name}</p>
+                {profile.occupation && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 dark:bg-pink-900/30 dark:text-pink-300">
+                    {profile.occupation}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">
+                <span>{profile.distance}</span>
+                {profile.age && <span>• {profile.age} yrs</span>}
+              </div>
+              {profile.bio && (
+                <p className="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5 line-clamp-1">
+                  {profile.bio}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => handleChatClick(profile.id)}
+              className="px-3 py-2 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-primary to-rose-500 shadow-md active:scale-95 transition-transform"
+            >
+              Hi
+            </button>
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 px-4">
-            <p className="text-gray-500 dark:text-[#cc8ea3] text-center">
-              {searchQuery.trim()
-                ? `No profiles found matching "${searchQuery}"`
-                : 'No profiles found'}
-            </p>
-          </div>
-        )}
-      </main>
+        ))}
 
-      {/* Floating Action Button */}
-      <FloatingActionButton
-        title="Get Coins"
-        subtitle="Boost Profile"
-        icon="add"
-        onClick={handleGetCoinsClick}
-      />
+      </main>
 
       {/* Bottom Navigation Bar */}
       <BottomNavigation items={navigationItems} onItemClick={handleNavigationClick} />

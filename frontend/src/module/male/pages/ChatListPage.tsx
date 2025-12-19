@@ -1,11 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChatListHeader } from '../components/ChatListHeader';
+import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { SearchBar } from '../components/SearchBar';
 import { ChatListItem } from '../components/ChatListItem';
 import { BottomNavigation } from '../components/BottomNavigation';
-import { MaleTopNavbar } from '../components/MaleTopNavbar';
-import { MaleSidebar } from '../components/MaleSidebar';
 import { EditChatModal } from '../components/EditChatModal';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import type { Chat } from '../types/male.types';
@@ -89,7 +88,7 @@ const mockChats: Chat[] = [
 
 export const ChatListPage = () => {
   const navigate = useNavigate();
-  const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
+  const { navigationItems, handleNavigationClick } = useMaleNavigation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -129,19 +128,8 @@ export const ChatListPage = () => {
 
   return (
     <div className="relative flex h-full min-h-screen w-full flex-col bg-background-light dark:bg-background-dark overflow-hidden pb-20">
-      {/* Top Navbar */}
-      <MaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
-
-      {/* Sidebar */}
-      <MaleSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        items={navigationItems}
-        onItemClick={handleNavigationClick}
-      />
-
-      {/* Status Bar Area (Visual Only) */}
-      <div className="h-6 w-full bg-background-light dark:bg-background-dark shrink-0" />
+      {/* Status Bar Spacer */}
+      <div className="h-4 w-full bg-background-light dark:bg-background-dark shrink-0" />
 
       {/* Top App Bar */}
       <ChatListHeader coinBalance={coinBalance} onEditClick={handleEditClick} />

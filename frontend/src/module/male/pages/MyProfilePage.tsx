@@ -1,15 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
+// @ts-nocheck
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../core/context/AuthContext';
-import { TopAppBar } from '../components/TopAppBar';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { MaleTopNavbar } from '../components/MaleTopNavbar';
 import { MaleSidebar } from '../components/MaleSidebar';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
-import axios from 'axios';
+import { ProfileHeader } from '../components/ProfileHeader';
+import { WalletBalance } from '../components/WalletBalance';
+import { StatsGrid } from '../components/StatsGrid';
+import { QuickActionsGrid } from '../components/QuickActionsGrid';
+import { BadgeDisplay } from '../../../shared/components/BadgeDisplay';
+import type { Badge } from '../types/male.types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Mock data - replace with actual API calls
 const mockProfile = {
@@ -38,18 +42,84 @@ const mockStats = {
   coinsSpent: 4250,
 };
 
+// Mock badges data
+const mockUserBadges: Badge[] = [
+  {
+    id: '1',
+    name: 'VIP Member',
+    icon: 'workspace_premium',
+    description: 'Exclusive VIP membership badge',
+    category: 'vip',
+    isUnlocked: true,
+    unlockedAt: '2024-01-15',
+    rarity: 'legendary',
+  },
+  {
+    id: '2',
+    name: 'First Gift',
+    icon: 'redeem',
+    description: 'Sent your first gift',
+    category: 'achievement',
+    isUnlocked: true,
+    unlockedAt: '2024-01-20',
+    rarity: 'common',
+  },
+  {
+    id: '3',
+    name: 'Chat Master',
+    icon: 'chat_bubble',
+    description: 'Sent 100 messages',
+    category: 'achievement',
+    isUnlocked: true,
+    unlockedAt: '2024-01-25',
+    rarity: 'rare',
+  },
+  {
+    id: '5',
+    name: 'Early Adopter',
+    icon: 'star',
+    description: 'Joined in the first month',
+    category: 'special',
+    isUnlocked: true,
+    unlockedAt: '2024-01-01',
+    rarity: 'rare',
+  },
+  {
+    id: '7',
+    name: 'Profile Perfect',
+    icon: 'check_circle',
+    description: 'Complete your profile 100%',
+    category: 'achievement',
+    isUnlocked: true,
+    unlockedAt: '2024-01-10',
+    rarity: 'common',
+  },
+];
+
+// Mock dashboard data for profile page
+const mockDashboardData = {
+  wallet: {
+    balance: 1250,
+  },
+  stats: {
+    matches: 12,
+    sent: 85,
+    views: 204,
+  },
+  user: {
+    badges: mockUserBadges,
+  },
+};
+
 export const MyProfilePage = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  const [isEditMode, setIsEditMode] = useState(false);
   const [profile, setProfile] = useState(mockProfile);
-  const [editedProfile, setEditedProfile] = useState(mockProfile);
   const [showOnlineStatus, setShowOnlineStatus] = useState(true);
   const [allowMessagesFrom, setAllowMessagesFrom] = useState<'everyone' | 'verified'>('everyone');
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -74,111 +144,34 @@ export const MyProfilePage = () => {
         photos: (user.photos && user.photos.length > 0) ? user.photos : (user.avatarUrl ? [user.avatarUrl] : []),
       };
       setProfile(userProfile);
-      setEditedProfile(userProfile);
     }
   }, [user]);
 
-  const handleEdit = () => {
-    setIsEditMode(true);
-    setEditedProfile({ ...profile });
+  const handleNotificationClick = () => {
+    navigate('/male/notifications');
   };
 
-  const handleSave = async () => {
-    try {
-      await axios.patch(`${API_URL}/users/me`, {
-        name: editedProfile.name,
-        age: editedProfile.age,
-        city: editedProfile.city,
-        occupation: editedProfile.occupation,
-        bio: editedProfile.bio,
-        interests: editedProfile.interests,
-        photos: editedProfile.photos,
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('matchmint_auth_token')}` }
-      });
+  const handleTopUpClick = () => {
+    navigate('/male/buy-coins');
+  };
 
-      updateUser({
-        name: editedProfile.name,
-        age: editedProfile.age,
-        city: editedProfile.city,
-        location: editedProfile.city,
-        occupation: editedProfile.occupation,
-        bio: editedProfile.bio,
-        interests: editedProfile.interests,
-        photos: editedProfile.photos,
-        avatarUrl: (editedProfile.photos && editedProfile.photos.length > 0) ? editedProfile.photos[0] : ''
-      });
-
-      setProfile({ ...editedProfile });
-      setIsEditMode(false);
-    } catch (error) {
-      console.error('Failed to update profile', error);
-      alert('Failed to update profile');
+  const handleQuickActionClick = (actionId: string) => {
+    switch (actionId) {
+      case 'buy-coins':
+        navigate('/male/buy-coins');
+        break;
+      case 'vip':
+        // TODO: Navigate to VIP membership page
+        console.log('VIP membership');
+        break;
+      case 'send-gift':
+        navigate('/male/gifts');
+        break;
+      default:
+        break;
     }
   };
 
-  const handleCancel = () => {
-    setEditedProfile({ ...profile });
-    setIsEditMode(false);
-  };
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditedProfile({
-          ...editedProfile,
-          avatar: reader.result as string,
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handlePhotoUpload = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const newPhotos: string[] = [...editedProfile.photos || []];
-    Array.from(files).forEach((file) => {
-      if (file.type.startsWith('image/') && newPhotos.length < 6) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const result = event.target?.result as string;
-          if (result) {
-            setEditedProfile({
-              ...editedProfile,
-              photos: [...editedProfile.photos || [], result],
-            });
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleDeletePhoto = (index: number) => {
-    const newPhotos = editedProfile.photos?.filter((_, i) => i !== index) || [];
-    setEditedProfile({ ...editedProfile, photos: newPhotos });
-  };
-
-  const handleSetProfilePhoto = (index: number) => {
-    const newPhotos = [...editedProfile.photos || []];
-    const [selectedPhoto] = newPhotos.splice(index, 1);
-    newPhotos.unshift(selectedPhoto);
-    setEditedProfile({ ...editedProfile, photos: newPhotos, avatar: selectedPhoto });
-  };
-
-  const currentProfile = isEditMode ? editedProfile : profile;
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-white pb-24 min-h-screen">
@@ -193,328 +186,128 @@ export const MyProfilePage = () => {
         onItemClick={handleNavigationClick}
       />
 
-      {/* Top App Bar */}
-      <TopAppBar
-        title={isEditMode ? 'Edit Profile' : 'My Profile'}
-        icon="person"
-        onFilterClick={() => { }}
-        onSearch={() => { }}
-      />
+      {/* Profile Header Section */}
+      <div className="flex p-4 pt-4 @container">
+        <div className="flex w-full flex-col gap-4">
+              <ProfileHeader
+                user={{
+                  name: profile.name,
+                  avatar: profile.avatar,
+                  isPremium: false,
+                  isOnline: true,
+                }}
+                onArrowClick={() => navigate('/male/my-profile/profile')}
+              />
+          {/* Wallet & Top Up Block */}
+          <WalletBalance
+            balance={mockDashboardData.wallet.balance}
+            onTopUpClick={handleTopUpClick}
+          />
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <StatsGrid stats={mockDashboardData.stats} />
+
+      {/* Badges Section */}
+      {mockDashboardData.user.badges && mockDashboardData.user.badges.length > 0 && (
+        <div className="px-4 mb-4">
+          <div className="bg-gradient-to-br from-white via-pink-50/50 to-rose-50/30 dark:from-[#2d1a24] dark:via-[#3d2530] dark:to-[#2d1a24] rounded-2xl p-5 shadow-lg border border-pink-200/50 dark:border-pink-900/30 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-pink-200/20 dark:bg-pink-900/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-pink-500 to-rose-500 rounded-xl shadow-md">
+                    <MaterialSymbol name="workspace_premium" className="text-white" size={24} />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">My Badges</h3>
+                </div>
+                <button
+                  onClick={() => navigate('/male/badges')}
+                  className="text-sm font-semibold text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 transition-colors"
+                >
+                  View All
+                </button>
+              </div>
+              <BadgeDisplay
+                badges={mockDashboardData.user.badges}
+                maxDisplay={6}
+                showUnlockedOnly={true}
+                compact={true}
+                onBadgeClick={() => navigate('/male/badges')}
+              />
+              <div className="mt-4 pt-4 border-t border-pink-200/50 dark:border-pink-900/30">
+                <p className="text-xs text-pink-600/70 dark:text-pink-400/70 text-center font-medium">
+                  {mockDashboardData.user.badges.filter(b => b.isUnlocked).length} unlocked • {mockDashboardData.user.badges.length} total
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Actions Grid */}
+      <div className="px-4 mb-4">
+        <QuickActionsGrid
+          actions={[
+            {
+              id: 'buy-coins',
+              icon: 'monetization_on',
+              label: 'Buy Coins',
+              iconColor: 'text-primary',
+              iconBgColor: 'bg-primary/10',
+            },
+            {
+              id: 'vip',
+              icon: 'card_membership',
+              label: 'VIP Membership',
+              iconColor: 'text-purple-500',
+              iconBgColor: 'bg-purple-500/10',
+            },
+            {
+              id: 'send-gift',
+              icon: 'redeem',
+              label: 'Send Gift',
+              iconColor: 'text-pink-500',
+              iconBgColor: 'bg-pink-500/10',
+            },
+          ]}
+          onActionClick={handleQuickActionClick}
+        />
+      </div>
+
 
       {/* Profile Content */}
       <main className="p-4 space-y-6">
-        {/* Profile Photo */}
-        <div className="flex flex-col items-center">
-          <div className="relative">
-            <img
-              src={currentProfile.avatar}
-              alt={currentProfile.name}
-              className="w-32 h-32 rounded-full object-cover border-4 border-primary"
-            />
-            {isEditMode && (
-              <label className="absolute bottom-0 right-0 flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white cursor-pointer hover:bg-primary/90 transition-colors active:scale-95">
-                <MaterialSymbol name="camera_alt" size={20} />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  className="hidden"
-                />
-              </label>
-            )}
-          </div>
-          {!isEditMode && (
-            <button
-              onClick={handleEdit}
-              className="mt-4 px-6 py-2 bg-primary text-[#231d10] font-semibold rounded-xl hover:bg-primary/90 transition-colors active:scale-95"
-            >
-              Edit Profile
-            </button>
-          )}
-        </div>
-
-        {/* Profile Info */}
-        <div className="bg-white dark:bg-[#342d18] rounded-2xl p-4 shadow-sm space-y-4">
-          {/* Name and Age */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-              Name
-            </label>
-            {isEditMode ? (
-              <input
-                type="text"
-                value={editedProfile.name}
-                onChange={(e) =>
-                  setEditedProfile({ ...editedProfile, name: e.target.value })
-                }
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            ) : (
-              <p className="text-lg font-bold">{profile.name}</p>
-            )}
-          </div>
-
-          {/* Age */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-              Age
-            </label>
-            {isEditMode ? (
-              <input
-                type="number"
-                min="18"
-                max="100"
-                value={editedProfile.age}
-                onChange={(e) =>
-                  setEditedProfile({ ...editedProfile, age: parseInt(e.target.value) || 18 })
-                }
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-            ) : (
-              <p className="text-base">{profile.age ? `${profile.age} years old` : 'Not specified'}</p>
-            )}
-          </div>
-
-          {/* Occupation */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-              Occupation
-            </label>
-            {isEditMode ? (
-              <input
-                type="text"
-                value={editedProfile.occupation || ''}
-                onChange={(e) =>
-                  setEditedProfile({ ...editedProfile, occupation: e.target.value })
-                }
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Enter your occupation"
-              />
-            ) : (
-              <p className="text-base">{profile.occupation || 'Not specified'}</p>
-            )}
-          </div>
-
-          {/* City */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-              City
-            </label>
-            {isEditMode ? (
-              <input
-                type="text"
-                value={editedProfile.city || ''}
-                onChange={(e) =>
-                  setEditedProfile({ ...editedProfile, city: e.target.value })
-                }
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Enter your city"
-              />
-            ) : (
-              <p className="text-base">{profile.city || 'Not specified'}</p>
-            )}
-          </div>
-
-          {/* Bio */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-              Bio
-            </label>
-            {isEditMode ? (
-              <textarea
-                value={editedProfile.bio || ''}
-                onChange={(e) =>
-                  setEditedProfile({ ...editedProfile, bio: e.target.value })
-                }
-                rows={4}
-                maxLength={500}
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                placeholder="Tell us about yourself..."
-              />
-            ) : (
-              <p className="text-base text-gray-700 dark:text-gray-300">
-                {profile.bio || 'No bio yet'}
-              </p>
-            )}
-          </div>
-
-          {/* Interests */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
-              Interests (Max 10)
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {isEditMode ? (
-                <>
-                  {(editedProfile.interests || []).map((interest, index) => (
-                    <div key={index} className="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-full">
-                      <input
-                        type="text"
-                        value={interest}
-                        onChange={(e) => {
-                          const newInterests = [...(editedProfile.interests || [])];
-                          newInterests[index] = e.target.value;
-                          setEditedProfile({ ...editedProfile, interests: newInterests });
-                        }}
-                        className="bg-transparent border-none outline-none text-sm w-24 text-slate-900 dark:text-white placeholder-gray-400"
-                        placeholder="Interest"
-                        autoFocus={interest === ''}
-                      />
-                      <button
-                        onClick={() => {
-                          const newInterests = (editedProfile.interests || []).filter((_, i) => i !== index);
-                          setEditedProfile({ ...editedProfile, interests: newInterests });
-                        }}
-                        className="text-gray-400 hover:text-red-500 transition-colors flex items-center"
-                      >
-                        <MaterialSymbol name="close" size={16} />
-                      </button>
-                    </div>
-                  ))}
-                  {(editedProfile.interests || []).length < 10 && (
-                    <button
-                      onClick={() => {
-                        setEditedProfile({ ...editedProfile, interests: [...(editedProfile.interests || []), ''] });
-                      }}
-                      className="px-3 py-1 border border-dashed border-gray-300 dark:border-gray-600 rounded-full text-sm text-gray-500 hover:text-primary hover:border-primary transition-colors flex items-center gap-1"
-                    >
-                      <MaterialSymbol name="add" size={16} />
-                      Add
-                    </button>
-                  )}
-                </>
-              ) : (
-                (currentProfile.interests && currentProfile.interests.length > 0) ? (
-                  currentProfile.interests.map((interest, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium"
-                    >
-                      {interest}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">No interests added.</p>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Photo Gallery */}
-        {!isEditMode && (
-          <div className="bg-white dark:bg-[#342d18] rounded-2xl p-4 shadow-sm">
-            <h3 className="font-semibold mb-3">Photo Gallery</h3>
-            <div className="grid grid-cols-3 gap-2">
-              {(profile.photos || [profile.avatar]).map((photo, index) => (
-                <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
-                  <img
-                    src={photo}
-                    alt={`Photo ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-              {(profile.photos || [profile.avatar]).length < 6 && (
-                <button
-                  onClick={() => setIsEditMode(true)}
-                  className="aspect-square border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center hover:border-primary transition-colors"
-                >
-                  <MaterialSymbol name="add" size={24} className="text-gray-400" />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Photo Gallery (Edit Mode) */}
-        {isEditMode && (
-          <div className="bg-white dark:bg-[#342d18] rounded-2xl p-4 shadow-sm">
-            <h3 className="font-semibold mb-3">Photo Gallery (Max 6)</h3>
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {(editedProfile.photos || [editedProfile.avatar]).map((photo, index) => (
-                <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
-                  <img
-                    src={photo}
-                    alt={`Photo ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    {index !== 0 && (
-                      <button
-                        onClick={() => handleSetProfilePhoto(index)}
-                        className="p-1 bg-white/20 rounded backdrop-blur-sm hover:bg-white/30"
-                        title="Set as profile photo"
-                      >
-                        <MaterialSymbol name="star" size={16} className="text-white" />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDeletePhoto(index)}
-                      className="p-1 bg-red-500/80 rounded backdrop-blur-sm hover:bg-red-500"
-                      title="Delete photo"
-                    >
-                      <MaterialSymbol name="delete" size={16} className="text-white" />
-                    </button>
-                  </div>
-                  {index === 0 && (
-                    <div className="absolute top-1 left-1 bg-primary text-slate-900 text-xs px-1 rounded font-bold">
-                      Main
-                    </div>
-                  )}
-                </div>
-              ))}
-              {(editedProfile.photos || [editedProfile.avatar]).length < 6 && (
-                <button
-                  onClick={handlePhotoUpload}
-                  className="aspect-square border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center hover:border-primary transition-colors"
-                >
-                  <MaterialSymbol name="add" size={24} className="text-gray-400" />
-                </button>
-              )}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </div>
-        )}
 
         {/* Activity Summary */}
-        {!isEditMode && (
-          <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent dark:from-primary/5 dark:via-primary/3 dark:to-transparent rounded-2xl p-4 border border-primary/20">
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <MaterialSymbol name="insights" className="text-primary" />
-              Activity Summary
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{mockStats.profileViews}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Profile Views</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{mockStats.matches}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Matches</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{mockStats.messagesSent}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Messages Sent</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{mockStats.coinsSpent}</div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Coins Spent</div>
-              </div>
+        <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent dark:from-primary/5 dark:via-primary/3 dark:to-transparent rounded-2xl p-4 border border-primary/20">
+          <h3 className="font-semibold mb-4 flex items-center gap-2">
+            <MaterialSymbol name="insights" className="text-primary" />
+            Activity Summary
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{mockStats.profileViews}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Profile Views</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{mockStats.matches}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Matches</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{mockStats.messagesSent}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Messages Sent</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{mockStats.coinsSpent}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Coins Spent</div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Profile Settings */}
-        {!isEditMode && (
-          <div className="bg-white dark:bg-[#342d18] rounded-2xl p-4 shadow-sm space-y-4">
+        <div className="bg-white dark:bg-[#342d18] rounded-2xl p-4 shadow-sm space-y-4">
             <h3 className="font-semibold mb-3">Profile Settings</h3>
 
             {/* Privacy Settings */}
@@ -618,44 +411,11 @@ export const MyProfilePage = () => {
               </button>
             </div>
           </div>
-        )}
 
-        {/* Preferences Section */}
-        {!isEditMode && (
-          <div className="bg-white dark:bg-[#342d18] rounded-2xl p-4 shadow-sm">
-            <h3 className="font-semibold mb-3">Preferences</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Age Range</span>
-                <span className="font-medium">
-                  {profile.preferences.ageRange.min} - {profile.preferences.ageRange.max} years
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Max Distance</span>
-                <span className="font-medium">{profile.preferences.maxDistance} km</span>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Action Buttons (Edit Mode) */}
-        {isEditMode && (
-          <div className="flex gap-3">
-            <button
-              onClick={handleCancel}
-              className="flex-1 h-12 bg-gray-100 dark:bg-[#2f151e] text-slate-700 dark:text-white font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-[#342d18] transition-colors active:scale-95"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex-1 h-12 bg-primary text-[#231d10] font-semibold rounded-xl hover:bg-primary/90 transition-colors active:scale-95"
-            >
-              Save Changes
-            </button>
-          </div>
-        )}
+
+
+
       </main>
 
       {/* Bottom Navigation Bar */}

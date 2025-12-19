@@ -6,8 +6,6 @@ import { QuickActionsGrid } from '../components/QuickActionsGrid';
 import { SegmentedControls } from '../components/SegmentedControls';
 import { TransactionItem } from '../components/TransactionItem';
 import { BottomNavigation } from '../components/BottomNavigation';
-import { MaleTopNavbar } from '../components/MaleTopNavbar';
-import { MaleSidebar } from '../components/MaleSidebar';
 import { HelpModal } from '../components/HelpModal';
 import { QuickActionsModal } from '../components/QuickActionsModal';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
@@ -76,7 +74,7 @@ const filterOptions = [
 
 export const WalletPage = () => {
   const navigate = useNavigate();
-  const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
+  const { navigationItems, handleNavigationClick } = useMaleNavigation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -131,17 +129,6 @@ export const WalletPage = () => {
 
   return (
     <div className="relative flex h-full min-h-screen w-full flex-col max-w-md mx-auto shadow-xl bg-background-light dark:bg-background-dark pb-20">
-      {/* Top Navbar */}
-      <MaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
-
-      {/* Sidebar */}
-      <MaleSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        items={navigationItems}
-        onItemClick={handleNavigationClick}
-      />
-
       {/* Top App Bar */}
       <WalletHeader onHelpClick={handleHelpClick} />
 

@@ -1,93 +1,31 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../core/context/AuthContext';
-import { ProfileHeader } from '../components/ProfileHeader';
-import { WalletBalance } from '../components/WalletBalance';
-import { StatsGrid } from '../components/StatsGrid';
 import { DiscoverNearbyCard } from '../components/DiscoverNearbyCard';
 import { ActiveChatsList } from '../components/ActiveChatsList';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { MaleTopNavbar } from '../components/MaleTopNavbar';
 import { MaleSidebar } from '../components/MaleSidebar';
-import { QuickActionsGrid } from '../components/QuickActionsGrid';
-import { BadgeDisplay } from '../../../shared/components/BadgeDisplay';
-import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
-import type { MaleDashboardData, Badge } from '../types/male.types';
+interface MaleDashboardData {
+  nearbyUsers: Array<{
+    id: string;
+    name: string;
+    avatar: string;
+  }>;
+  activeChats: Array<{
+    id: string;
+    userId: string;
+    userName: string;
+    userAvatar: string;
+    lastMessage: string;
+    timestamp: string;
+    isOnline: boolean;
+    hasUnread: boolean;
+  }>;
+}
 
-// Mock badges data
-const mockUserBadges: Badge[] = [
-  {
-    id: '1',
-    name: 'VIP Member',
-    icon: 'workspace_premium',
-    description: 'Exclusive VIP membership badge',
-    category: 'vip',
-    isUnlocked: true,
-    unlockedAt: '2024-01-15',
-    rarity: 'legendary',
-  },
-  {
-    id: '2',
-    name: 'First Gift',
-    icon: 'redeem',
-    description: 'Sent your first gift',
-    category: 'achievement',
-    isUnlocked: true,
-    unlockedAt: '2024-01-20',
-    rarity: 'common',
-  },
-  {
-    id: '3',
-    name: 'Chat Master',
-    icon: 'chat_bubble',
-    description: 'Sent 100 messages',
-    category: 'achievement',
-    isUnlocked: true,
-    unlockedAt: '2024-01-25',
-    rarity: 'rare',
-  },
-  {
-    id: '5',
-    name: 'Early Adopter',
-    icon: 'star',
-    description: 'Joined in the first month',
-    category: 'special',
-    isUnlocked: true,
-    unlockedAt: '2024-01-01',
-    rarity: 'rare',
-  },
-  {
-    id: '7',
-    name: 'Profile Perfect',
-    icon: 'check_circle',
-    description: 'Complete your profile 100%',
-    category: 'achievement',
-    isUnlocked: true,
-    unlockedAt: '2024-01-10',
-    rarity: 'common',
-  },
-];
-
-// Mock data - replace with actual API calls
 // Mock data - replace with actual API calls
 const mockDashboardData: MaleDashboardData = {
-  user: {
-    id: '1',
-    name: 'User',
-    avatar: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
-    isPremium: true,
-    isOnline: true,
-    badges: mockUserBadges,
-  },
-  wallet: {
-    balance: 1250,
-  },
-  stats: {
-    matches: 12,
-    sent: 85,
-    views: 204,
-  },
   nearbyUsers: [
     {
       id: '1',
@@ -137,51 +75,13 @@ const mockDashboardData: MaleDashboardData = {
 export const MaleDashboard = () => {
   const [dashboardData] = useState<MaleDashboardData>(mockDashboardData);
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
 
   useEffect(() => {
-    // window.scrollTo(0, 0); 
+    window.scrollTo(0, 0);
   }, []);
 
-  const displayedUser = user ? {
-    name: user.name || 'Anonymous',
-    avatar: user.avatarUrl || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
-    isPremium: false,
-    isOnline: true,
-  } : (isLoading ? {
-    ...dashboardData.user,
-    name: 'Loading...',
-  } : dashboardData.user);
 
-  const handleNotificationClick = () => {
-    navigate('/male/notifications');
-  };
-
-  const handleTopUpClick = () => {
-    navigate('/male/buy-coins');
-  };
-
-  const handleQuickActionClick = (actionId: string) => {
-    switch (actionId) {
-      case 'buy-coins':
-        navigate('/male/buy-coins');
-        break;
-      case 'vip':
-        // TODO: Navigate to VIP membership page
-        console.log('VIP membership');
-        break;
-      case 'send-gift':
-        navigate('/male/gifts');
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleExploreClick = () => {
-    navigate('/male/discover');
-  };
 
   const handleChatClick = (chatId: string) => {
     navigate(`/male/chat/${chatId}`);
@@ -189,6 +89,10 @@ export const MaleDashboard = () => {
 
   const handleSeeAllChatsClick = () => {
     navigate('/male/chats');
+  };
+
+  const handleExploreClick = () => {
+    navigate('/male/discover');
   };
 
   return (
@@ -204,90 +108,8 @@ export const MaleDashboard = () => {
         onItemClick={handleNavigationClick}
       />
 
-      {/* Profile Header Section */}
-      <div className="flex p-4 pt-4 @container">
-        <div className="flex w-full flex-col gap-4">
-          <ProfileHeader
-            user={displayedUser}
-            onNotificationClick={handleNotificationClick}
-          />
-          {/* Wallet & Top Up Block */}
-          <WalletBalance
-            balance={dashboardData.wallet.balance}
-            onTopUpClick={handleTopUpClick}
-          />
-        </div>
-      </div>
 
-      {/* Stats Grid */}
-      <StatsGrid stats={dashboardData.stats} />
 
-      {/* Badges Section */}
-      {dashboardData.user.badges && dashboardData.user.badges.length > 0 && (
-        <div className="px-4 mb-4">
-          <div className="bg-gradient-to-br from-white via-pink-50/50 to-rose-50/30 dark:from-[#2d1a24] dark:via-[#3d2530] dark:to-[#2d1a24] rounded-2xl p-5 shadow-lg border border-pink-200/50 dark:border-pink-900/30 overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-pink-200/20 dark:bg-pink-900/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-pink-500 to-rose-500 rounded-xl shadow-md">
-                    <MaterialSymbol name="workspace_premium" className="text-white" size={24} />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">My Badges</h3>
-                </div>
-                <button
-                  onClick={() => navigate('/male/badges')}
-                  className="text-sm font-semibold text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 transition-colors"
-                >
-                  View All
-                </button>
-              </div>
-              <BadgeDisplay
-                badges={dashboardData.user.badges}
-                maxDisplay={6}
-                showUnlockedOnly={true}
-                compact={true}
-                onBadgeClick={() => navigate('/male/badges')}
-              />
-              <div className="mt-4 pt-4 border-t border-pink-200/50 dark:border-pink-900/30">
-                <p className="text-xs text-pink-600/70 dark:text-pink-400/70 text-center font-medium">
-                  {dashboardData.user.badges.filter(b => b.isUnlocked).length} unlocked • {dashboardData.user.badges.length} total
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Actions Grid */}
-      <div className="px-4 mb-4">
-        <QuickActionsGrid
-          actions={[
-            {
-              id: 'buy-coins',
-              icon: 'monetization_on',
-              label: 'Buy Coins',
-              iconColor: 'text-primary',
-              iconBgColor: 'bg-primary/10',
-            },
-            {
-              id: 'vip',
-              icon: 'card_membership',
-              label: 'VIP Membership',
-              iconColor: 'text-purple-500',
-              iconBgColor: 'bg-purple-500/10',
-            },
-            {
-              id: 'send-gift',
-              icon: 'redeem',
-              label: 'Send Gift',
-              iconColor: 'text-pink-500',
-              iconBgColor: 'bg-pink-500/10',
-            },
-          ]}
-          onActionClick={handleQuickActionClick}
-        />
-      </div>
 
       {/* Discover Nearby Card */}
       <DiscoverNearbyCard

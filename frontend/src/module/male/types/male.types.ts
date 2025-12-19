@@ -58,7 +58,7 @@ export interface NearbyFemale {
   chatCost: number;
 }
 
-export type FilterType = 'all' | 'online' | 'new' | 'popular';
+export type FilterType = 'all' | 'nearby' | 'new' | 'popular';
 
 export interface Message {
   id: string;

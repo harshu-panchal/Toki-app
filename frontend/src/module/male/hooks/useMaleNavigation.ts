@@ -37,7 +37,7 @@ export const useMaleNavigation = () => {
   const handleNavigationClick = (itemId: string) => {
     switch (itemId) {
       case 'discover':
-        navigate('/male/dashboard');
+        navigate('/male/discover');
         break;
       case 'chats':
         navigate('/male/chats');

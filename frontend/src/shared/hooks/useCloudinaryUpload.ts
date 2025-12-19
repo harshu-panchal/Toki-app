@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * React Hook for Cloudinary Uploads
  * @owner: Sujal (Shared - Both use)

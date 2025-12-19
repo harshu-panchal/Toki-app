@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo } from 'react';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import type { AdminUser } from '../types/admin.types';

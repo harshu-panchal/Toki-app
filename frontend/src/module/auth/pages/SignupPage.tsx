@@ -5,10 +5,15 @@ import type { SignupData } from '../types/auth.types';
 
 export const SignupPage = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<SignupData>({
-    fullName: '',
-    email: '',
-    phone: '',
+  const [formData, setFormData] = useState<SignupData>(() => {
+    const saved = sessionStorage.getItem('onboarding_signup');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return {
+      fullName: '',
+      phone: '',
+    };
   });
   const [errors, setErrors] = useState<Partial<SignupData>>({});
 
@@ -17,12 +22,6 @@ export const SignupPage = () => {
 
     if (!formData.fullName.trim()) {
       newErrors.fullName = 'Full name is required';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
     }
 
     if (!formData.phone.trim()) {
@@ -77,33 +76,12 @@ export const SignupPage = () => {
                 type="text"
                 value={formData.fullName}
                 onChange={(e) => handleChange('fullName', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${
-                  errors.fullName ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${errors.fullName ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 placeholder="Enter your full name"
               />
               {errors.fullName && (
                 <p className="mt-1 text-sm text-red-500">{errors.fullName}</p>
-              )}
-            </div>
-
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="your.email@example.com"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-500">{errors.email}</p>
               )}
             </div>
 
@@ -121,9 +99,8 @@ export const SignupPage = () => {
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => handleChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  className={`flex-1 px-4 py-3 border rounded-r-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${
-                    errors.phone ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`flex-1 px-4 py-3 border rounded-r-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${errors.phone ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   placeholder="9876543210"
                   maxLength={10}
                 />

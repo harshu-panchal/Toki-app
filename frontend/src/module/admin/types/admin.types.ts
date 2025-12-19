@@ -27,7 +27,7 @@ export interface ActivityItem {
 // User Management
 export interface AdminUser {
   id: string;
-  email: string;
+  phoneNumber: string;
   name: string;
   role: 'male' | 'female';
   isBlocked: boolean;
@@ -50,10 +50,16 @@ export interface FemaleApproval {
   userId: string;
   user: AdminUser;
   profile: UserProfile;
-  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvalStatus: 'pending' | 'approved' | 'rejected' | 'resubmit_requested';
+  verificationDocuments: {
+    aadhaarCard: {
+      url: string;
+      verified: boolean;
+    };
+  };
   submittedAt: string;
   reviewedBy?: string;
-  reviewNotes?: string;
+  rejectionReason?: string;
 }
 
 // Coin Economy

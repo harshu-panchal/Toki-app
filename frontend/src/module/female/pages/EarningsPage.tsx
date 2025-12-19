@@ -5,85 +5,84 @@ import { FemaleBottomNavigation } from '../components/FemaleBottomNavigation';
 import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
 import { FemaleSidebar } from '../components/FemaleSidebar';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
-import type { EarningsBreakdown } from '../types/female.types';
-
-// Mock data - replace with actual API calls
-const mockEarningsBreakdown: EarningsBreakdown[] = [
-  { date: '2024-01-15', amount: 500, source: 'message', fromUserId: '1', fromUserName: 'Alex' },
-  { date: '2024-01-15', amount: 500, source: 'video_call', fromUserId: '2', fromUserName: 'Michael' },
-  { date: '2024-01-14', amount: 500, source: 'message', fromUserId: '3', fromUserName: 'David' },
-  { date: '2024-01-14', amount: 500, source: 'message', fromUserId: '1', fromUserName: 'Alex' },
-  { date: '2024-01-13', amount: 300, source: 'message', fromUserId: '2', fromUserName: 'Michael' },
-  { date: '2024-01-12', amount: 800, source: 'video_call', fromUserId: '1', fromUserName: 'Alex' },
-  { date: '2024-01-11', amount: 400, source: 'message', fromUserId: '3', fromUserName: 'David' },
-];
-
-// Helper function to aggregate earnings by date
-const aggregateEarningsByDate = (breakdown: EarningsBreakdown[]) => {
-  const aggregated: Record<string, number> = {};
-  breakdown.forEach((earning) => {
-    const date = earning.date;
-    aggregated[date] = (aggregated[date] || 0) + earning.amount;
-  });
-  return aggregated;
-};
-
-// Helper function to get chart data for selected period
-const getChartData = (breakdown: EarningsBreakdown[], period: 'daily' | 'weekly' | 'monthly') => {
-  const aggregated = aggregateEarningsByDate(breakdown);
-  const dates = Object.keys(aggregated).sort();
-  
-  if (period === 'daily') {
-    return dates.slice(-7).map((date) => ({
-      date,
-      amount: aggregated[date],
-      label: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    }));
-  } else if (period === 'weekly') {
-    // Group by week
-    const weeklyData: Record<string, number> = {};
-    dates.forEach((date) => {
-      const weekStart = new Date(date);
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      const weekKey = weekStart.toISOString().split('T')[0];
-      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + aggregated[date];
-    });
-    return Object.keys(weeklyData)
-      .sort()
-      .slice(-4)
-      .map((weekKey) => ({
-        date: weekKey,
-        amount: weeklyData[weekKey],
-        label: `Week ${new Date(weekKey).getWeek()}`,
-      }));
-  } else {
-    // Monthly
-    const monthlyData: Record<string, number> = {};
-    dates.forEach((date) => {
-      const monthKey = date.substring(0, 7); // YYYY-MM
-      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + aggregated[date];
-    });
-    return Object.keys(monthlyData)
-      .sort()
-      .slice(-6)
-      .map((monthKey) => ({
-        date: monthKey,
-        amount: monthlyData[monthKey],
-        label: new Date(monthKey + '-01').toLocaleDateString('en-US', { month: 'short' }),
-      }));
-  }
-};
+import walletService from '../../../core/services/wallet.service';
+import type { Transaction } from '../../../core/types/wallet.types';
 
 export const EarningsPage = () => {
   const navigate = useNavigate();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
 
+  const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     window.scrollTo(0, 0);
+    fetchData();
   }, []);
-  const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
-  const totalEarnings = 15250;
-  const availableBalance = 12450;
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const [balanceData, txData] = await Promise.all([
+        walletService.getMyBalance().catch(() => ({ balance: 0 })),
+        walletService.getMyTransactions({ direction: 'credit', limit: 50 }).catch(() => ({ transactions: [] })),
+      ]);
+
+      setBalance(balanceData.balance || 0);
+      setTransactions(txData.transactions || []);
+    } catch (err: any) {
+      console.error('Failed to fetch earnings data:', err);
+      setError('Failed to load earnings data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Calculate total earnings from transactions
+  const totalEarnings = transactions
+    .filter((t) => t.direction === 'credit' && t.type !== 'purchase')
+    .reduce((sum, t) => sum + t.amountCoins, 0);
+
+  // Get earnings breakdown by type
+  const earningsByType = transactions
+    .filter((t) => t.direction === 'credit' && t.type !== 'purchase')
+    .reduce((acc, t) => {
+      acc[t.type] = (acc[t.type] || 0) + t.amountCoins;
+      return acc;
+    }, {} as Record<string, number>);
+
+  // Get icon for transaction type
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'message_earned':
+        return 'mail';
+      case 'video_call_earned':
+        return 'videocam';
+      case 'gift_received':
+        return 'redeem';
+      default:
+        return 'monetization_on';
+    }
+  };
+
+  // Format transaction type for display
+  const formatType = (type: string) => {
+    switch (type) {
+      case 'message_earned':
+        return 'Message';
+      case 'video_call_earned':
+        return 'Video Call';
+      case 'gift_received':
+        return 'Gift';
+      default:
+        return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+  };
 
   return (
     <div className="flex flex-col bg-background-light dark:bg-background-dark min-h-screen pb-20">
@@ -109,184 +108,117 @@ export const EarningsPage = () => {
           </button>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Earnings</h1>
         </div>
+        <button
+          onClick={() => navigate('/female/withdrawal')}
+          className="px-4 py-2 bg-primary text-slate-900 font-medium rounded-lg hover:bg-yellow-400 transition-colors"
+        >
+          Withdraw
+        </button>
       </header>
 
-      {/* Earnings Summary */}
-      <div className="px-6 py-4 space-y-4">
-        <div className="bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/10 dark:to-primary/5 rounded-xl p-6 border border-primary/10">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-medium text-slate-600 dark:text-[#cbbc90]">Total Earnings</span>
-            <MaterialSymbol name="trending_up" className="text-primary" />
-          </div>
-          <p className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            {totalEarnings.toLocaleString()} coins
-          </p>
-          <p className="text-sm text-slate-500 dark:text-[#cbbc90]">
-            Available: {availableBalance.toLocaleString()} coins
-          </p>
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
+      )}
 
-        {/* Period Selector */}
-        <div className="flex gap-2">
-          {(['daily', 'weekly', 'monthly'] as const).map((period) => (
-            <button
-              key={period}
-              onClick={() => setSelectedPeriod(period)}
-              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedPeriod === period
-                  ? 'bg-primary text-slate-900'
-                  : 'bg-gray-200 dark:bg-[#342d18] text-gray-700 dark:text-white'
-              }`}
-            >
-              {period.charAt(0).toUpperCase() + period.slice(1)}
-            </button>
-          ))}
+      {/* Error State */}
+      {error && (
+        <div className="mx-6 mt-4 p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl flex items-center gap-2">
+          <MaterialSymbol name="error" className="text-red-500" />
+          <span>{error}</span>
         </div>
-      </div>
+      )}
 
-      {/* Earnings Chart */}
-      <div className="px-6 py-4">
-        <div className="bg-white dark:bg-[#342d18] rounded-xl p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Earnings Trend</h3>
-          <EarningsChart data={getChartData(mockEarningsBreakdown, selectedPeriod)} />
-        </div>
-      </div>
-
-      {/* Earnings Breakdown */}
-      <div className="flex-1 overflow-y-auto px-6 min-h-0">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Earnings History</h2>
-        <div className="space-y-3">
-          {mockEarningsBreakdown.map((earning, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-4 bg-white dark:bg-[#342d18] rounded-xl shadow-sm"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-600">
-                  <MaterialSymbol
-                    name={earning.source === 'video_call' ? 'videocam' : 'mail'}
-                    filled
-                  />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {earning.source === 'video_call' ? 'Video Call' : 'Message'}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-[#cbbc90]">
-                    {earning.fromUserName} • {new Date(earning.date).toLocaleDateString()}
-                  </p>
-                </div>
+      {!isLoading && !error && (
+        <>
+          {/* Earnings Summary */}
+          <div className="px-6 py-4 space-y-4">
+            <div className="bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/10 dark:to-primary/5 rounded-xl p-6 border border-primary/10">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-slate-600 dark:text-[#cbbc90]">Total Earnings</span>
+                <MaterialSymbol name="trending_up" className="text-primary" />
               </div>
-              <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                +{earning.amount}
+              <p className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                {totalEarnings.toLocaleString()} coins
+              </p>
+              <p className="text-sm text-slate-500 dark:text-[#cbbc90]">
+                Available: {balance.toLocaleString()} coins
               </p>
             </div>
-          ))}
-        </div>
-      </div>
+
+            {/* Earnings by Type */}
+            <div className="grid grid-cols-3 gap-3">
+              {Object.entries(earningsByType).slice(0, 3).map(([type, amount]) => (
+                <div key={type} className="bg-white dark:bg-[#342d18] rounded-xl p-4 text-center shadow-sm">
+                  <MaterialSymbol name={getTypeIcon(type)} className="text-primary mb-1" size={24} />
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">{amount}</p>
+                  <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{formatType(type)}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Period Selector */}
+            <div className="flex gap-2">
+              {(['daily', 'weekly', 'monthly'] as const).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setSelectedPeriod(period)}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${selectedPeriod === period
+                    ? 'bg-primary text-slate-900'
+                    : 'bg-gray-200 dark:bg-[#342d18] text-gray-700 dark:text-white'
+                    }`}
+                >
+                  {period.charAt(0).toUpperCase() + period.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Earnings History */}
+          <div className="flex-1 overflow-y-auto px-6 min-h-0">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Recent Earnings</h2>
+            {transactions.length === 0 ? (
+              <div className="text-center py-8">
+                <MaterialSymbol name="account_balance_wallet" size={48} className="text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500 dark:text-[#cbbc90]">No earnings yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {transactions
+                  .filter((t) => t.direction === 'credit' && t.type !== 'purchase')
+                  .slice(0, 20)
+                  .map((tx) => (
+                    <div
+                      key={tx._id}
+                      className="flex items-center justify-between p-4 bg-white dark:bg-[#342d18] rounded-xl shadow-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-600">
+                          <MaterialSymbol name={getTypeIcon(tx.type)} filled />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {formatType(tx.type)}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-[#cbbc90]">
+                            {new Date(tx.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                        +{tx.amountCoins}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       <FemaleBottomNavigation items={navigationItems} onItemClick={handleNavigationClick} />
     </div>
   );
 };
-
-// Earnings Chart Component
-interface ChartDataPoint {
-  date: string;
-  amount: number;
-  label: string;
-}
-
-interface EarningsChartProps {
-  data: ChartDataPoint[];
-}
-
-const EarningsChart = ({ data }: EarningsChartProps) => {
-  if (data.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-48 text-gray-400 dark:text-gray-600">
-        <p>No data available</p>
-      </div>
-    );
-  }
-
-  const maxAmount = Math.max(...data.map((d) => d.amount));
-  const chartHeight = 200;
-  const barWidth = Math.max(40, (100 / data.length) - 2);
-
-  return (
-    <div className="relative">
-      <svg width="100%" height={chartHeight} className="overflow-visible">
-        {/* Grid lines */}
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-          <line
-            key={ratio}
-            x1="0"
-            y1={chartHeight * ratio}
-            x2="100%"
-            y2={chartHeight * ratio}
-            stroke="currentColor"
-            strokeWidth="1"
-            className="text-gray-200 dark:text-gray-700"
-            strokeDasharray="4 4"
-          />
-        ))}
-
-        {/* Bars */}
-        {data.map((point, index) => {
-          const barHeight = maxAmount > 0 ? (point.amount / maxAmount) * chartHeight * 0.9 : 0;
-          const x = (index / data.length) * 100;
-          const y = chartHeight - barHeight;
-
-          return (
-            <g key={point.date}>
-              <rect
-                x={`${x}%`}
-                y={y}
-                width={`${barWidth}%`}
-                height={barHeight}
-                fill="currentColor"
-                className="text-primary"
-                rx="4"
-              />
-              {/* Amount label on top of bar */}
-              {barHeight > 20 && (
-                <text
-                  x={`${x + barWidth / 2}%`}
-                  y={y - 5}
-                  textAnchor="middle"
-                  className="text-xs font-semibold fill-gray-700 dark:fill-gray-300"
-                >
-                  {point.amount}
-                </text>
-              )}
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* X-axis labels */}
-      <div className="flex justify-between mt-2 px-2">
-        {data.map((point) => (
-          <span
-            key={point.date}
-            className="text-xs text-gray-500 dark:text-[#cbbc90] text-center"
-            style={{ width: `${barWidth}%` }}
-          >
-            {point.label}
-          </span>
-        ))}
-      </div>
-
-      {/* Y-axis labels */}
-      <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500 dark:text-[#cbbc90] pr-2">
-        <span>{maxAmount}</span>
-        <span>{Math.round(maxAmount * 0.75)}</span>
-        <span>{Math.round(maxAmount * 0.5)}</span>
-        <span>{Math.round(maxAmount * 0.25)}</span>
-        <span>0</span>
-      </div>
-    </div>
-  );
-};
-

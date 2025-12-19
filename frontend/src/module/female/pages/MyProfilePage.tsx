@@ -1,21 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../core/context/AuthContext';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { FemaleBottomNavigation } from '../components/FemaleBottomNavigation';
 import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
 import { FemaleSidebar } from '../components/FemaleSidebar';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export const MyProfilePage = () => {
   const navigate = useNavigate();
+  const { user, updateUser } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('Emma');
+  const [name, setName] = useState(user?.name || 'Anonymous');
   const [age, setAge] = useState(24);
   const [location, setLocation] = useState('New York, USA');
   const [bio, setBio] = useState('Love traveling and meeting new people! 🌍');
@@ -24,7 +27,7 @@ export const MyProfilePage = () => {
   const [allowMessagesFrom, setAllowMessagesFrom] = useState<'everyone' | 'verified'>('everyone');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
-  
+
   // Stats
   const stats = {
     messagesReceived: 1247,
@@ -34,15 +37,60 @@ export const MyProfilePage = () => {
     availableBalance: 12450,
   };
 
-  const [photos, setPhotos] = useState<string[]>([
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuC81hkr7IkYx1ryaWF6XEKAw50xyRvJBGMogrF-zD5ChG66QAopPNWZvczWXWXasmarotX6xfLiXqIGT-HGa4N4mpnfl6tHPN16fBm5L0ebBFFR6YnfhOhNpt_PXB-rNdw4iozv00ERuqlCKno-B1P2UZ6g-dU5YY4Or_m3Xdgk4_MrxVK9o6Uz70Vr_fXQdMhSrjjCl7s_yQE_R1O9FNwroQqdfSFv6kiO76qVxmnHDhLrYwRWtfdSdegsNjAzgAdgkUZgUomw2j8',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuBNnKyZLNWCV7B-XwKgjd9-bbG9ZSq583oYGij7uKTYk2Ah_9nkpqgsGSDu-FUgux5QDiLCTw_y9JxTBhkZjWAOOReMhlK98A_84vIsKaxQ0IUzZqkJ7-wnAv67HRuUVltC2QQzOfbTk1-OdjqC7SWT4iG-MXs81ePZK3x1mYOHabRqp4eH7yIfiX3tH-YMXSs1uWS41vrxzPC8_MJHasLGiUWINfHYQ7KF2jfo0n_Yo6qBJKr_qMrOBUdimUVVJdY46GD7L0v-oL4',
-  ]);
+  const [photos, setPhotos] = useState<string[]>([]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name || 'Anonymous');
+      setAge(user.age || 24);
+      setLocation(user.location || user.city || 'Unknown Location');
+      setBio(user.bio || 'Love traveling and meeting new people! 🌍');
+      setInterests(user.interests && user.interests.length > 0 ? user.interests : ['Travel', 'Photography', 'Music', 'Fitness']);
+
+      if (user.photos && user.photos.length > 0) {
+        setPhotos(user.photos);
+      } else if (user.avatarUrl) {
+        setPhotos([user.avatarUrl]);
+      } else {
+        setPhotos([]);
+      }
+    }
+  }, [user]);
 
 
-  const handleSave = () => {
-    // TODO: Implement save profile
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      const response = await axios.patch(`${API_URL}/users/me`, {
+        name,
+        age,
+        city: location,
+        bio,
+        interests,
+        photos
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('matchmint_auth_token')}` }
+      });
+
+      updateUser({
+        name,
+        age,
+        city: location,
+        location,
+        bio,
+        interests,
+        photos,
+        avatarUrl: photos.length > 0 ? photos[0] : ''
+      });
+
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to update profile', error);
+      alert('Failed to update profile');
+    }
   };
 
   const handlePhotoUpload = () => {
@@ -53,7 +101,6 @@ export const MyProfilePage = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newPhotos: string[] = [];
     Array.from(files).forEach((file) => {
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
@@ -149,7 +196,7 @@ export const MyProfilePage = () => {
                 <div className="h-3 w-3 rounded-full bg-white" />
               </div>
             </div>
-            
+
             <div className="text-center mb-4">
               <div className="flex items-center justify-center gap-2 mb-1">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{name}</h2>
@@ -170,7 +217,7 @@ export const MyProfilePage = () => {
                 Change Profile Photo
               </button>
             )}
-            
+
             <input
               ref={fileInputRef}
               type="file"
@@ -193,7 +240,7 @@ export const MyProfilePage = () => {
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.messagesReceived.toLocaleString()}</p>
             <p className="text-xs text-gray-500 dark:text-[#cbbc90] mt-1">Messages</p>
           </div>
-          
+
           <div className="bg-white dark:bg-[#342d18] rounded-xl p-4 shadow-sm text-center">
             <div className="flex items-center justify-center mb-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
@@ -203,7 +250,7 @@ export const MyProfilePage = () => {
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.profileViews.toLocaleString()}</p>
             <p className="text-xs text-gray-500 dark:text-[#cbbc90] mt-1">Views</p>
           </div>
-          
+
           <div className="bg-white dark:bg-[#342d18] rounded-xl p-4 shadow-sm text-center">
             <div className="flex items-center justify-center mb-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
@@ -435,7 +482,7 @@ export const MyProfilePage = () => {
             <MaterialSymbol name="insights" className="text-primary" />
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Activity Summary</h3>
           </div>
-          
+
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#2a2515] rounded-lg">
               <div className="flex items-center gap-3">
@@ -486,12 +533,12 @@ export const MyProfilePage = () => {
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Settings</h3>
             </div>
           </div>
-          
+
           <div className="divide-y divide-gray-200 dark:divide-white/5">
             {/* Privacy Settings */}
             <div className="px-6 py-4">
               <h4 className="text-sm font-semibold text-gray-700 dark:text-[#cbbc90] mb-3">Privacy</h4>
-              
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -500,14 +547,12 @@ export const MyProfilePage = () => {
                   </div>
                   <button
                     onClick={() => setShowOnlineStatus(!showOnlineStatus)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      showOnlineStatus ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showOnlineStatus ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        showOnlineStatus ? 'translate-x-6' : 'translate-x-1'
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showOnlineStatus ? 'translate-x-6' : 'translate-x-1'
+                        }`}
                     />
                   </button>
                 </div>
@@ -532,7 +577,7 @@ export const MyProfilePage = () => {
             {/* Notification Settings */}
             <div className="px-6 py-4">
               <h4 className="text-sm font-semibold text-gray-700 dark:text-[#cbbc90] mb-3">Notifications</h4>
-              
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -541,14 +586,12 @@ export const MyProfilePage = () => {
                   </div>
                   <button
                     onClick={() => setEmailNotifications(!emailNotifications)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      emailNotifications ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${emailNotifications ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        emailNotifications ? 'translate-x-6' : 'translate-x-1'
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${emailNotifications ? 'translate-x-6' : 'translate-x-1'
+                        }`}
                     />
                   </button>
                 </div>
@@ -560,14 +603,12 @@ export const MyProfilePage = () => {
                   </div>
                   <button
                     onClick={() => setPushNotifications(!pushNotifications)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      pushNotifications ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${pushNotifications ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        pushNotifications ? 'translate-x-6' : 'translate-x-1'
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${pushNotifications ? 'translate-x-6' : 'translate-x-1'
+                        }`}
                     />
                   </button>
                 </div>
@@ -577,7 +618,7 @@ export const MyProfilePage = () => {
             {/* Account Settings */}
             <div className="px-6 py-4">
               <h4 className="text-sm font-semibold text-gray-700 dark:text-[#cbbc90] mb-3">Account</h4>
-              
+
               <div className="space-y-2">
                 <button
                   onClick={() => navigate('/female/auto-messages')}

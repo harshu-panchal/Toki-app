@@ -5,90 +5,12 @@ import { CoinPlanEditor } from '../components/CoinPlanEditor';
 import { PayoutSlabEditor } from '../components/PayoutSlabEditor';
 import { useAdminNavigation } from '../hooks/useAdminNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
-import type { CoinPlan, PayoutSlab, MessageCosts, AdminSettings } from '../types/admin.types';
+import walletService from '../../../core/services/wallet.service';
+import type { CoinPlan, PayoutSlab, MessageCosts } from '../types/admin.types';
+import type { CoinPlan as WalletCoinPlan, PayoutSlab as WalletPayoutSlab } from '../../../core/types/wallet.types';
 
-// Mock data - replace with actual API calls
-const mockCoinPlans: CoinPlan[] = [
-  {
-    id: '1',
-    name: 'Basic Plan',
-    tier: 'basic',
-    priceInINR: 99,
-    baseCoins: 100,
-    bonusCoins: 0,
-    totalCoins: 100,
-    isActive: true,
-    displayOrder: 1,
-  },
-  {
-    id: '2',
-    name: 'Silver Plan',
-    tier: 'silver',
-    priceInINR: 299,
-    baseCoins: 300,
-    bonusCoins: 30,
-    totalCoins: 330,
-    isActive: true,
-    displayOrder: 2,
-  },
-  {
-    id: '3',
-    name: 'Gold Plan',
-    tier: 'gold',
-    priceInINR: 499,
-    baseCoins: 500,
-    bonusCoins: 100,
-    totalCoins: 600,
-    isActive: true,
-    displayOrder: 3,
-    badge: 'POPULAR',
-  },
-  {
-    id: '4',
-    name: 'Platinum Plan',
-    tier: 'platinum',
-    priceInINR: 999,
-    baseCoins: 1000,
-    bonusCoins: 500,
-    totalCoins: 1500,
-    isActive: true,
-    displayOrder: 4,
-    badge: 'BEST VALUE',
-  },
-];
-
-const mockPayoutSlabs: PayoutSlab[] = [
-  {
-    id: '1',
-    minCoins: 0,
-    maxCoins: 500,
-    payoutPercentage: 40,
-    displayOrder: 1,
-  },
-  {
-    id: '2',
-    minCoins: 501,
-    maxCoins: 1000,
-    payoutPercentage: 50,
-    displayOrder: 2,
-  },
-  {
-    id: '3',
-    minCoins: 1001,
-    maxCoins: 5000,
-    payoutPercentage: 60,
-    displayOrder: 3,
-  },
-  {
-    id: '4',
-    minCoins: 5001,
-    maxCoins: null,
-    payoutPercentage: 70,
-    displayOrder: 4,
-  },
-];
-
-const mockMessageCosts: MessageCosts = {
+// Default values for settings (these would come from an app settings API in production)
+const defaultMessageCosts: MessageCosts = {
   basic: 20,
   silver: 18,
   gold: 16,
@@ -96,7 +18,7 @@ const mockMessageCosts: MessageCosts = {
   videoCall: 500,
 };
 
-const mockWithdrawalSettings = {
+const defaultWithdrawalSettings = {
   minAmount: 500,
   maxAmount: 50000,
   processingFee: 0,
@@ -104,76 +26,190 @@ const mockWithdrawalSettings = {
   weeklyLimit: 50000,
 };
 
+// Helper to convert wallet types to admin types
+const mapWalletPlanToAdminPlan = (plan: WalletCoinPlan): CoinPlan => ({
+  id: plan._id,
+  name: plan.name,
+  tier: plan.tier,
+  priceInINR: plan.priceInINR,
+  baseCoins: plan.baseCoins,
+  bonusCoins: plan.bonusCoins,
+  totalCoins: plan.totalCoins,
+  isActive: plan.isActive,
+  displayOrder: plan.displayOrder,
+  badge: plan.badge === 'BEST_VALUE' ? 'BEST VALUE' : plan.badge || undefined,
+});
+
+const mapWalletSlabToAdminSlab = (slab: WalletPayoutSlab): PayoutSlab => ({
+  id: slab._id,
+  minCoins: slab.minCoins,
+  maxCoins: slab.maxCoins,
+  payoutPercentage: slab.payoutPercentage,
+  displayOrder: slab.displayOrder,
+});
+
 export const CoinEconomyPage = () => {
-  const [coinPlans, setCoinPlans] = useState<CoinPlan[]>(mockCoinPlans);
-  const [payoutSlabs, setPayoutSlabs] = useState<PayoutSlab[]>(mockPayoutSlabs);
-  const [messageCosts, setMessageCosts] = useState<MessageCosts>(mockMessageCosts);
-  const [withdrawalSettings, setWithdrawalSettings] = useState(mockWithdrawalSettings);
+  const [coinPlans, setCoinPlans] = useState<CoinPlan[]>([]);
+  const [payoutSlabs, setPayoutSlabs] = useState<PayoutSlab[]>([]);
+  const [messageCosts, setMessageCosts] = useState<MessageCosts>(defaultMessageCosts);
+  const [withdrawalSettings, setWithdrawalSettings] = useState(defaultWithdrawalSettings);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useAdminNavigation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    fetchData();
   }, []);
 
-  const handleSaveCoinPlan = (plan: CoinPlan) => {
-    if (plan.id && coinPlans.find((p) => p.id === plan.id)) {
-      // Update existing
-      setCoinPlans((prev) => prev.map((p) => (p.id === plan.id ? plan : p)));
-    } else {
-      // Add new
-      const newPlan = { ...plan, id: Date.now().toString() };
-      setCoinPlans((prev) => [...prev, newPlan]);
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const [plans, slabs] = await Promise.all([
+        walletService.getAllCoinPlans(),
+        walletService.getPayoutSlabs(),
+      ]);
+
+      setCoinPlans(plans.map(mapWalletPlanToAdminPlan));
+      setPayoutSlabs(slabs.map(mapWalletSlabToAdminSlab));
+    } catch (err: any) {
+      console.error('Failed to fetch data:', err);
+      setError('Failed to load data. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-    setHasChanges(true);
-    // TODO: API call to save coin plan
-    console.log('Coin plan saved:', plan);
   };
 
-  const handleDeleteCoinPlan = (planId: string) => {
-    setCoinPlans((prev) => prev.filter((p) => p.id !== planId));
-    setHasChanges(true);
-    // TODO: API call to delete coin plan
-    console.log('Coin plan deleted:', planId);
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
-  const handleSavePayoutSlab = (slab: PayoutSlab) => {
-    if (slab.id && payoutSlabs.find((s) => s.id === slab.id)) {
-      // Update existing
-      setPayoutSlabs((prev) => prev.map((s) => (s.id === slab.id ? slab : s)));
-    } else {
-      // Add new
-      const newSlab = { ...slab, id: Date.now().toString() };
-      setPayoutSlabs((prev) => [...prev, newSlab]);
+  const handleSaveCoinPlan = async (plan: CoinPlan) => {
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      if (plan.id && coinPlans.find((p) => p.id === plan.id)) {
+        // Update existing
+        const updated = await walletService.updateCoinPlan(plan.id, {
+          name: plan.name,
+          tier: plan.tier,
+          priceInINR: plan.priceInINR,
+          baseCoins: plan.baseCoins,
+          bonusCoins: plan.bonusCoins,
+          badge: plan.badge || null,
+          displayOrder: plan.displayOrder,
+          isActive: plan.isActive,
+        });
+        setCoinPlans((prev) => prev.map((p) => (p.id === plan.id ? mapWalletPlanToAdminPlan(updated) : p)));
+        showSuccess('Coin plan updated successfully');
+      } else {
+        // Add new
+        const created = await walletService.createCoinPlan({
+          name: plan.name,
+          tier: plan.tier,
+          priceInINR: plan.priceInINR,
+          baseCoins: plan.baseCoins,
+          bonusCoins: plan.bonusCoins,
+          badge: plan.badge || null,
+          displayOrder: plan.displayOrder || coinPlans.length + 1,
+        });
+        setCoinPlans((prev) => [...prev, mapWalletPlanToAdminPlan(created)]);
+        showSuccess('Coin plan created successfully');
+      }
+    } catch (err: any) {
+      console.error('Failed to save coin plan:', err);
+      setError(err.response?.data?.message || 'Failed to save coin plan');
+    } finally {
+      setIsSaving(false);
     }
-    setHasChanges(true);
-    // TODO: API call to save payout slab
-    console.log('Payout slab saved:', slab);
   };
 
-  const handleDeletePayoutSlab = (slabId: string) => {
-    setPayoutSlabs((prev) => prev.filter((s) => s.id !== slabId));
-    setHasChanges(true);
-    // TODO: API call to delete payout slab
-    console.log('Payout slab deleted:', slabId);
+  const handleDeleteCoinPlan = async (planId: string) => {
+    try {
+      setIsSaving(true);
+      setError(null);
+      await walletService.deleteCoinPlan(planId);
+      setCoinPlans((prev) => prev.filter((p) => p.id !== planId));
+      showSuccess('Coin plan deleted successfully');
+    } catch (err: any) {
+      console.error('Failed to delete coin plan:', err);
+      setError(err.response?.data?.message || 'Failed to delete coin plan');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSavePayoutSlab = async (slab: PayoutSlab) => {
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      if (slab.id && payoutSlabs.find((s) => s.id === slab.id)) {
+        // Update existing
+        const updated = await walletService.updatePayoutSlab(slab.id, {
+          minCoins: slab.minCoins,
+          maxCoins: slab.maxCoins,
+          payoutPercentage: slab.payoutPercentage,
+          displayOrder: slab.displayOrder,
+        });
+        setPayoutSlabs((prev) => prev.map((s) => (s.id === slab.id ? mapWalletSlabToAdminSlab(updated) : s)));
+        showSuccess('Payout slab updated successfully');
+      } else {
+        // Add new
+        const created = await walletService.createPayoutSlab({
+          minCoins: slab.minCoins,
+          maxCoins: slab.maxCoins,
+          payoutPercentage: slab.payoutPercentage,
+          displayOrder: slab.displayOrder || payoutSlabs.length + 1,
+        });
+        setPayoutSlabs((prev) => [...prev, mapWalletSlabToAdminSlab(created)]);
+        showSuccess('Payout slab created successfully');
+      }
+    } catch (err: any) {
+      console.error('Failed to save payout slab:', err);
+      setError(err.response?.data?.message || 'Failed to save payout slab');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeletePayoutSlab = async (slabId: string) => {
+    try {
+      setIsSaving(true);
+      setError(null);
+      await walletService.deletePayoutSlab(slabId);
+      setPayoutSlabs((prev) => prev.filter((s) => s.id !== slabId));
+      showSuccess('Payout slab deleted successfully');
+    } catch (err: any) {
+      console.error('Failed to delete payout slab:', err);
+      setError(err.response?.data?.message || 'Failed to delete payout slab');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveMessageCosts = () => {
     setHasChanges(false);
-    // TODO: API call to save message costs
-    console.log('Message costs saved:', messageCosts);
+    // TODO: Implement when app settings API is available
+    showSuccess('Message costs saved (local only - API pending)');
   };
 
   const handleSaveWithdrawalSettings = () => {
     setHasChanges(false);
-    // TODO: API call to save withdrawal settings
-    console.log('Withdrawal settings saved:', withdrawalSettings);
+    // TODO: Implement when app settings API is available
+    showSuccess('Withdrawal settings saved (local only - API pending)');
   };
 
   const handleSaveAll = () => {
     handleSaveMessageCosts();
     handleSaveWithdrawalSettings();
-    // Coin plans and payout slabs are saved individually
   };
 
   return (
@@ -211,25 +247,61 @@ export const CoinEconomyPage = () => {
             )}
           </div>
 
+          {/* Loading State */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="mb-4 flex items-center gap-2 p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl">
+              <MaterialSymbol name="error" className="text-red-500" />
+              <span>{error}</span>
+              <button onClick={() => setError(null)} className="ml-auto"><MaterialSymbol name="close" size={18} /></button>
+            </div>
+          )}
+          {successMessage && (
+            <div className="mb-4 flex items-center gap-2 p-4 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-xl">
+              <MaterialSymbol name="check_circle" className="text-green-500" />
+              <span>{successMessage}</span>
+            </div>
+          )}
+
+          {/* Saving Overlay */}
+          {isSaving && (
+            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 flex items-center gap-3">
+                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <span>Saving...</span>
+              </div>
+            </div>
+          )}
+
           {/* Coin Plans Section */}
-          <div className="mb-6">
-            <CoinPlanEditor
-              plans={coinPlans}
-              onSave={handleSaveCoinPlan}
-              onDelete={handleDeleteCoinPlan}
-              onAdd={() => {}}
-            />
-          </div>
+          {!isLoading && (
+            <div className="mb-6">
+              <CoinPlanEditor
+                plans={coinPlans}
+                onSave={handleSaveCoinPlan}
+                onDelete={handleDeleteCoinPlan}
+                onAdd={() => { }}
+              />
+            </div>
+          )}
 
           {/* Payout Slabs Section */}
-          <div className="mb-6">
-            <PayoutSlabEditor
-              slabs={payoutSlabs}
-              onSave={handleSavePayoutSlab}
-              onDelete={handleDeletePayoutSlab}
-              onAdd={() => {}}
-            />
-          </div>
+          {!isLoading && (
+            <div className="mb-6">
+              <PayoutSlabEditor
+                slabs={payoutSlabs}
+                onSave={handleSavePayoutSlab}
+                onDelete={handleDeletePayoutSlab}
+                onAdd={() => { }}
+              />
+            </div>
+          )}
 
           {/* Message Costs Section */}
           <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 mb-6">

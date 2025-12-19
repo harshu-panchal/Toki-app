@@ -10,8 +10,11 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@cloudinary/react": "^1.11.3",
+    "@cloudinary/url-gen": "^1.11.2",
     "@hookform/resolvers": "^3.3.2",
     "axios": "^1.6.2",
+    "cloudinary": "^1.41.3",
     "date-fns": "^2.30.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

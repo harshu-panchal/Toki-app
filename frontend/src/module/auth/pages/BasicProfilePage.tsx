@@ -5,9 +5,16 @@ import type { BasicProfileData } from '../types/auth.types';
 
 export const BasicProfilePage = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<BasicProfileData>({
-    dateOfBirth: '',
-    gender: 'male',
+  const [formData, setFormData] = useState<BasicProfileData>(() => {
+    const saved = sessionStorage.getItem('onboarding_basic_profile');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return {
+      dateOfBirth: '',
+      gender: 'male',
+      location: '',
+    };
   });
   const [errors, setErrors] = useState<Partial<Record<keyof BasicProfileData, string>>>({});
 
@@ -46,6 +53,10 @@ export const BasicProfilePage = () => {
       newErrors.gender = 'Please select your gender';
     }
 
+    if (!formData.location.trim()) {
+      newErrors.location = 'Location is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -55,21 +66,33 @@ export const BasicProfilePage = () => {
     if (validateForm()) {
       // Store basic profile data
       sessionStorage.setItem('onboarding_basic_profile', JSON.stringify(formData));
-      navigate('/onboarding/preferences');
+      navigate('/onboarding/interests');
     }
+  };
+
+  const handleBack = () => {
+    sessionStorage.setItem('onboarding_basic_profile', JSON.stringify(formData));
+    navigate('/signup');
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         {/* Progress Indicator */}
-        <div className="mb-8">
+        <div className="mb-8 relative">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="absolute -top-10 left-0 p-2 text-gray-600 hover:text-pink-600 transition-colors"
+          >
+            <MaterialSymbol name="arrow_back" size={24} />
+          </button>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Step 2 of 4</span>
+            <span className="text-sm font-medium text-gray-700">Step 2 of 3</span>
             <span className="text-sm text-gray-500">Basic Profile</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-pink-500 h-2 rounded-full" style={{ width: '50%' }}></div>
+            <div className="bg-pink-500 h-2 rounded-full" style={{ width: '66%' }}></div>
           </div>
         </div>
 
@@ -98,9 +121,8 @@ export const BasicProfilePage = () => {
                   }
                 }}
                 max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${
-                  errors.dateOfBirth ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${errors.dateOfBirth ? 'border-red-500' : 'border-gray-300'
+                  }`}
               />
               {errors.dateOfBirth && (
                 <p className="mt-1 text-sm text-red-500">{errors.dateOfBirth}</p>
@@ -116,11 +138,10 @@ export const BasicProfilePage = () => {
                 {(['male', 'female', 'prefer-not-to-say'] as const).map((gender) => (
                   <label
                     key={gender}
-                    className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${
-                      formData.gender === gender
-                        ? 'border-pink-500 bg-pink-50'
-                        : 'border-gray-300 hover:border-pink-300'
-                    }`}
+                    className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${formData.gender === gender
+                      ? 'border-pink-500 bg-pink-50'
+                      : 'border-gray-300 hover:border-pink-300'
+                      }`}
                   >
                     <input
                       type="radio"
@@ -144,6 +165,31 @@ export const BasicProfilePage = () => {
               {errors.gender && (
                 <p className="mt-1 text-sm text-red-500">{errors.gender}</p>
               )}
+            </div>
+
+            {/* Location */}
+            <div>
+              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                Location
+              </label>
+              <input
+                id="location"
+                type="text"
+                value={formData.location}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, location: e.target.value }));
+                  if (errors.location) {
+                    setErrors((prev) => ({ ...prev, location: undefined }));
+                  }
+                }}
+                placeholder="City, Area"
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${errors.location ? 'border-red-500' : 'border-gray-300'
+                  }`}
+              />
+              {errors.location && (
+                <p className="mt-1 text-sm text-red-500">{errors.location}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">Google Maps location selection coming soon.</p>
             </div>
 
             {/* Submit Button */}

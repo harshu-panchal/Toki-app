@@ -1,11 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../core/context/AuthContext';
 import { TopAppBar } from '../components/TopAppBar';
 import { BottomNavigation } from '../components/BottomNavigation';
 import { MaleTopNavbar } from '../components/MaleTopNavbar';
 import { MaleSidebar } from '../components/MaleSidebar';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Mock data - replace with actual API calls
 const mockProfile = {
@@ -36,6 +40,7 @@ const mockStats = {
 
 export const MyProfilePage = () => {
   const navigate = useNavigate();
+  const { user, updateUser } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,15 +55,66 @@ export const MyProfilePage = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      const userProfile = {
+        ...mockProfile,
+        id: user.id || mockProfile.id,
+        name: user.name || 'Anonymous',
+        age: user.age || 0,
+        occupation: user.occupation || '',
+        city: user.city || (user.location ? user.location.split(',')[0] : '') || '',
+        bio: user.bio || '',
+        interests: user.interests || [],
+        avatar: user.avatarUrl || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
+        photos: (user.photos && user.photos.length > 0) ? user.photos : (user.avatarUrl ? [user.avatarUrl] : []),
+      };
+      setProfile(userProfile);
+      setEditedProfile(userProfile);
+    }
+  }, [user]);
+
   const handleEdit = () => {
     setIsEditMode(true);
     setEditedProfile({ ...profile });
   };
 
-  const handleSave = () => {
-    setProfile({ ...editedProfile });
-    setIsEditMode(false);
-    // TODO: API call to save profile
+  const handleSave = async () => {
+    try {
+      await axios.patch(`${API_URL}/users/me`, {
+        name: editedProfile.name,
+        age: editedProfile.age,
+        city: editedProfile.city,
+        occupation: editedProfile.occupation,
+        bio: editedProfile.bio,
+        interests: editedProfile.interests,
+        photos: editedProfile.photos,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('matchmint_auth_token')}` }
+      });
+
+      updateUser({
+        name: editedProfile.name,
+        age: editedProfile.age,
+        city: editedProfile.city,
+        location: editedProfile.city,
+        occupation: editedProfile.occupation,
+        bio: editedProfile.bio,
+        interests: editedProfile.interests,
+        photos: editedProfile.photos,
+        avatarUrl: (editedProfile.photos && editedProfile.photos.length > 0) ? editedProfile.photos[0] : ''
+      });
+
+      setProfile({ ...editedProfile });
+      setIsEditMode(false);
+    } catch (error) {
+      console.error('Failed to update profile', error);
+      alert('Failed to update profile');
+    }
   };
 
   const handleCancel = () => {
@@ -141,8 +197,8 @@ export const MyProfilePage = () => {
       <TopAppBar
         title={isEditMode ? 'Edit Profile' : 'My Profile'}
         icon="person"
-        onFilterClick={() => {}}
-        onSearch={() => {}}
+        onFilterClick={() => { }}
+        onSearch={() => { }}
       />
 
       {/* Profile Content */}
@@ -215,7 +271,7 @@ export const MyProfilePage = () => {
                 className="w-full px-3 py-2 bg-gray-50 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             ) : (
-              <p className="text-base">{profile.age} years old</p>
+              <p className="text-base">{profile.age ? `${profile.age} years old` : 'Not specified'}</p>
             )}
           </div>
 
@@ -285,17 +341,62 @@ export const MyProfilePage = () => {
           {/* Interests */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
-              Interests
+              Interests (Max 10)
             </label>
             <div className="flex flex-wrap gap-2">
-              {currentProfile.interests.map((interest, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium"
-                >
-                  {interest}
-                </span>
-              ))}
+              {isEditMode ? (
+                <>
+                  {(editedProfile.interests || []).map((interest, index) => (
+                    <div key={index} className="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-full">
+                      <input
+                        type="text"
+                        value={interest}
+                        onChange={(e) => {
+                          const newInterests = [...(editedProfile.interests || [])];
+                          newInterests[index] = e.target.value;
+                          setEditedProfile({ ...editedProfile, interests: newInterests });
+                        }}
+                        className="bg-transparent border-none outline-none text-sm w-24 text-slate-900 dark:text-white placeholder-gray-400"
+                        placeholder="Interest"
+                        autoFocus={interest === ''}
+                      />
+                      <button
+                        onClick={() => {
+                          const newInterests = (editedProfile.interests || []).filter((_, i) => i !== index);
+                          setEditedProfile({ ...editedProfile, interests: newInterests });
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors flex items-center"
+                      >
+                        <MaterialSymbol name="close" size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {(editedProfile.interests || []).length < 10 && (
+                    <button
+                      onClick={() => {
+                        setEditedProfile({ ...editedProfile, interests: [...(editedProfile.interests || []), ''] });
+                      }}
+                      className="px-3 py-1 border border-dashed border-gray-300 dark:border-gray-600 rounded-full text-sm text-gray-500 hover:text-primary hover:border-primary transition-colors flex items-center gap-1"
+                    >
+                      <MaterialSymbol name="add" size={16} />
+                      Add
+                    </button>
+                  )}
+                </>
+              ) : (
+                (currentProfile.interests && currentProfile.interests.length > 0) ? (
+                  currentProfile.interests.map((interest, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium"
+                    >
+                      {interest}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No interests added.</p>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -415,7 +516,7 @@ export const MyProfilePage = () => {
         {!isEditMode && (
           <div className="bg-white dark:bg-[#342d18] rounded-2xl p-4 shadow-sm space-y-4">
             <h3 className="font-semibold mb-3">Profile Settings</h3>
-            
+
             {/* Privacy Settings */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Privacy</h4>
@@ -426,14 +527,12 @@ export const MyProfilePage = () => {
                 </div>
                 <button
                   onClick={() => setShowOnlineStatus(!showOnlineStatus)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    showOnlineStatus ? 'bg-primary' : 'bg-gray-300'
-                  }`}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${showOnlineStatus ? 'bg-primary' : 'bg-gray-300'
+                    }`}
                 >
                   <div
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      showOnlineStatus ? 'translate-x-6' : ''
-                    }`}
+                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${showOnlineStatus ? 'translate-x-6' : ''
+                      }`}
                   />
                 </button>
               </div>
@@ -463,14 +562,12 @@ export const MyProfilePage = () => {
                 </div>
                 <button
                   onClick={() => setEmailNotifications(!emailNotifications)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    emailNotifications ? 'bg-primary' : 'bg-gray-300'
-                  }`}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${emailNotifications ? 'bg-primary' : 'bg-gray-300'
+                    }`}
                 >
                   <div
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      emailNotifications ? 'translate-x-6' : ''
-                    }`}
+                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${emailNotifications ? 'translate-x-6' : ''
+                      }`}
                   />
                 </button>
               </div>
@@ -481,14 +578,12 @@ export const MyProfilePage = () => {
                 </div>
                 <button
                   onClick={() => setPushNotifications(!pushNotifications)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    pushNotifications ? 'bg-primary' : 'bg-gray-300'
-                  }`}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${pushNotifications ? 'bg-primary' : 'bg-gray-300'
+                    }`}
                 >
                   <div
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      pushNotifications ? 'translate-x-6' : ''
-                    }`}
+                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${pushNotifications ? 'translate-x-6' : ''
+                      }`}
                   />
                 </button>
               </div>

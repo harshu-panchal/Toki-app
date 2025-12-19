@@ -12,6 +12,7 @@ interface CoinPlanCardProps {
   isPopular?: boolean;
   isBestValue?: boolean;
   onBuyClick?: () => void;
+  disabled?: boolean;
 }
 
 export const CoinPlanCard = ({
@@ -24,6 +25,7 @@ export const CoinPlanCard = ({
   isPopular = false,
   isBestValue = false,
   onBuyClick,
+  disabled = false,
 }: CoinPlanCardProps) => {
   const getTierStyles = () => {
     if (isBestValue) {
@@ -63,9 +65,8 @@ export const CoinPlanCard = ({
       {/* Badge */}
       {badge && (
         <div
-          className={`absolute top-0 right-0 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl ${
-            isBestValue ? 'bg-indigo-600' : 'bg-primary'
-          }`}
+          className={`absolute top-0 right-0 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl ${isBestValue ? 'bg-indigo-600' : 'bg-primary'
+            }`}
         >
           {badge}
         </div>
@@ -90,9 +91,8 @@ export const CoinPlanCard = ({
             )}
           </div>
           <span
-            className={`text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1 ${
-              isPopular || isBestValue ? 'text-lg' : 'text-sm'
-            }`}
+            className={`text-yellow-600 dark:text-yellow-400 font-bold flex items-center gap-1 mt-1 ${isPopular || isBestValue ? 'text-lg' : 'text-sm'
+              }`}
           >
             <MaterialSymbol
               name="monetization_on"
@@ -103,11 +103,10 @@ export const CoinPlanCard = ({
           </span>
           {bonus && (
             <span
-              className={`text-[10px] px-1.5 py-0.5 rounded font-bold mt-1 ${
-                isBestValue
-                  ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                  : 'text-blue-600 dark:text-blue-400'
-              }`}
+              className={`text-[10px] px-1.5 py-0.5 rounded font-bold mt-1 ${isBestValue
+                ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                : 'text-blue-600 dark:text-blue-400'
+                }`}
             >
               {bonus}
             </span>
@@ -118,10 +117,11 @@ export const CoinPlanCard = ({
       <div className={isPopular || isBestValue ? 'mt-4' : 'mt-auto pt-2'}>
         <button
           onClick={onBuyClick}
-          className={`w-full ${getButtonHeight()} rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${getButtonStyles()}`}
+          disabled={disabled}
+          className={`w-full ${getButtonHeight()} rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${getButtonStyles()} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          Buy Now
-          {isPopular && <MaterialSymbol name="bolt" size={18} />}
+          {disabled ? 'Processing...' : 'Buy Now'}
+          {isPopular && !disabled && <MaterialSymbol name="bolt" size={18} />}
         </button>
       </div>
     </div>

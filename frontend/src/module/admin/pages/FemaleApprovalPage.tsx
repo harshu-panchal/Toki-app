@@ -6,129 +6,71 @@ import { useAdminNavigation } from '../hooks/useAdminNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import type { FemaleApproval } from '../types/admin.types';
 
-// Mock data - replace with actual API calls
-const mockPendingApprovals: FemaleApproval[] = [
-  {
-    userId: '1',
-    user: {
-      id: '1',
-      email: 'sarah.smith@example.com',
-      name: 'Sarah Smith',
-      role: 'female',
-      isBlocked: false,
-      isVerified: false,
-      createdAt: '2024-01-20T10:00:00Z',
-      lastLoginAt: new Date(Date.now() - 3600000).toISOString(),
-    },
-    profile: {
-      age: 25,
-      city: 'Mumbai',
-      bio: 'Love traveling, photography, and meeting new people. Looking for meaningful connections!',
-      photos: [
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuC81hkr7IkYx1ryaWF6XEKAw50xyRvJBGMogrF-zD5ChG66QAopPNWZvczWXWXasmarotX6xfLiXqIGT-HGa4N4mpnfl6tHPN16fBm5L0ebBFFR6YnfhOhNpt_PXB-rNdw4iozv00ERuqlCKno-B1P2UZ6g-dU5YY4Or_m3Xdgk4_MrxVK9o6Uz70Vr_fXQdMhSrjjCl7s_yQE_R1O9FNwroQqdfSFv6kiO76qVxmnHDhLrYwRWtfdSdegsNjAzgAdgkUZgUomw2j8',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuD_3D5tki5d2RSAJuSJ_Ow31htoQH_FV5cZMGWqi6Cr5CMDqjOebH645goD9BnAUabnDZTNirhvkDX6-eITfd1EzLFFNW_KcLdBa2aFXo2ydswriuWM4hVqwZ3FlbtKuKsNiL3AX4zC9kUMmRRH86XSg0TINNfB5SCw-BMXWwyr26rp1VW5KtSllNAOXUT7NSpen7_J_iBbqFkoLhUROpUPQJHgyhZT657eYWmFgMTm93IK8-tM1KQMXUjXcFcJYAkSXUPry1QbEfo',
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuBMwDNlS8xIMG2GPDOruau0I96EJW8UAfXypa6c3-bkakWGNwuNHv4bT_JxAS2tQQbwxDbRjkJCejmcZYfsqqtKJ-7OeHLwq5E9n5xOPyVwVLwv6bLTSaWBddBnCfSb85sZZW5ciF9ASv_TmzTFU3HcRlJPBSmBmvslJ_3dhEuuYLb5gfEYKw8ahTEUs9Nr49VBtnu-s1Y--7W9Kv1e7XebTvnXhrZ42e1cYEMDxGbgmAHw0fTnNAuBciEyspzTK1qCjMHkoxWkXPw',
-      ],
-      location: { lat: 19.0760, lng: 72.8777 },
-    },
-    approvalStatus: 'pending',
-    submittedAt: '2024-01-20T10:00:00Z',
-  },
-  {
-    userId: '2',
-    user: {
-      id: '2',
-      email: 'emily.johnson@example.com',
-      name: 'Emily Johnson',
-      role: 'female',
-      isBlocked: false,
-      isVerified: false,
-      createdAt: '2024-01-21T14:30:00Z',
-      lastLoginAt: new Date(Date.now() - 7200000).toISOString(),
-    },
-    profile: {
-      age: 23,
-      city: 'Delhi',
-      bio: 'Fitness enthusiast and food lover. Always up for adventures!',
-      photos: [
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuAIEnsXe0RpUu5LWRCfLi_lS-2wr9joEcf15WUPbFUamLpw44YrY6ci9n8jlL35RqX477FvduXCyJHoR4vMnQ9TazzyN4HxCns6xvssFGXnnj8AHJQ5WtID3GmVrTmJiIePWYlkI4Ahz944gcuOSaENv86pMF568tb1UYu1CYKCMkUhXOOsLd5mNg3EwYWl0x8i5xQoek5Ky4dnKVyB4UEPgmRoTzc_K8nhgnwI0tLLwJZqq9mNRcMWOvLl_sP4mjWRku5taLuKGJ0',
-      ],
-      location: { lat: 28.6139, lng: 77.2090 },
-    },
-    approvalStatus: 'pending',
-    submittedAt: '2024-01-21T14:30:00Z',
-  },
-  {
-    userId: '3',
-    user: {
-      id: '3',
-      email: 'jessica.martinez@example.com',
-      name: 'Jessica Martinez',
-      role: 'female',
-      isBlocked: false,
-      isVerified: false,
-      createdAt: '2024-01-22T09:15:00Z',
-      lastLoginAt: new Date(Date.now() - 1800000).toISOString(),
-    },
-    profile: {
-      age: 27,
-      city: 'Bangalore',
-      bio: 'Yoga instructor and wellness coach. Passionate about holistic health.',
-      photos: [],
-      location: { lat: 12.9716, lng: 77.5946 },
-    },
-    approvalStatus: 'pending',
-    submittedAt: '2024-01-22T09:15:00Z',
-  },
-];
+import * as adminService from '../services/admin.service';
+
+import { useAuth } from '../../../core/context/AuthContext';
 
 export const FemaleApprovalPage = () => {
-  const [approvals, setApprovals] = useState<FemaleApproval[]>(mockPendingApprovals);
-  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [approvals, setApprovals] = useState<FemaleApproval[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'resubmit_requested'>('pending');
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [selectedApprovals, setSelectedApprovals] = useState<Set<string>>(new Set());
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useAdminNavigation();
+  const { token } = useAuth();
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    fetchApprovals();
+  }, [filter]);
+
+  const fetchApprovals = async () => {
+    setIsLoading(true);
+    try {
+      const result = await adminService.getPendingFemales(filter, 1, 20, token || undefined);
+      setApprovals(result.users);
+    } catch (error) {
+      console.error('Failed to fetch approvals:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredApprovals = useMemo(() => {
-    return approvals.filter((approval) => approval.approvalStatus === filter);
-  }, [approvals, filter]);
+    // Note: Backend getPendingFemales only returns 'pending' status by default.
+    // If filter is something else, we might need a different API or filter client-side if we fetched all.
+    // For now, let's assume we fetch all or just pending.
+    return approvals; // Since the API current only returns pending
+  }, [approvals]);
 
-  const handleApprove = (userId: string) => {
-    setApprovals((prev) =>
-      prev.map((approval) =>
-        approval.userId === userId
-          ? { ...approval, approvalStatus: 'approved' as const, reviewedBy: 'Admin' }
-          : approval
-      )
-    );
-    // TODO: API call to approve female
-    console.log(`Female user ${userId} approved`);
+  const handleApprove = async (userId: string) => {
+    try {
+      await adminService.approveFemale(userId);
+      setApprovals((prev) => prev.filter(a => a.userId !== userId));
+      alert('User approved successfully');
+    } catch (error) {
+      alert('Approval failed');
+    }
   };
 
-  const handleReject = (userId: string, reason: string) => {
-    setApprovals((prev) =>
-      prev.map((approval) =>
-        approval.userId === userId
-          ? {
-              ...approval,
-              approvalStatus: 'rejected' as const,
-              reviewedBy: 'Admin',
-              reviewNotes: reason,
-            }
-          : approval
-      )
-    );
-    // TODO: API call to reject female
-    console.log(`Female user ${userId} rejected: ${reason}`);
+  const handleReject = async (userId: string, reason: string) => {
+    try {
+      await adminService.rejectFemale(userId, reason);
+      setApprovals((prev) => prev.filter(a => a.userId !== userId));
+      alert('User rejected');
+    } catch (error) {
+      alert('Rejection failed');
+    }
   };
 
-  const handleRequestInfo = (userId: string) => {
-    // TODO: Send notification to user requesting more information
-    console.log(`Requesting more info from user ${userId}`);
+  const handleResubmitRequest = async (userId: string, reason: string) => {
+    try {
+      await adminService.requestResubmit(userId, reason);
+      setApprovals((prev) => prev.filter(a => a.userId !== userId));
+      alert('Resubmission request sent');
+    } catch (error) {
+      alert('Request failed');
+    }
   };
 
   const handleBulkApprove = () => {
@@ -231,33 +173,39 @@ export const FemaleApprovalPage = () => {
           <div className="mb-6 flex flex-wrap gap-2">
             <button
               onClick={() => setFilter('pending')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === 'pending'
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'pending'
+                ? 'bg-orange-600 text-white'
+                : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
             >
               Pending ({approvals.filter((a) => a.approvalStatus === 'pending').length})
             </button>
             <button
               onClick={() => setFilter('approved')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === 'approved'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'approved'
+                ? 'bg-green-600 text-white'
+                : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
             >
               Approved ({approvals.filter((a) => a.approvalStatus === 'approved').length})
             </button>
             <button
               onClick={() => setFilter('rejected')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filter === 'rejected'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'rejected'
+                ? 'bg-red-600 text-white'
+                : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
             >
               Rejected ({approvals.filter((a) => a.approvalStatus === 'rejected').length})
+            </button>
+            <button
+              onClick={() => setFilter('resubmit_requested')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'resubmit_requested'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+            >
+              Resubmit Needed ({approvals.filter((a) => a.approvalStatus === 'resubmit_requested').length})
             </button>
           </div>
 
@@ -278,7 +226,11 @@ export const FemaleApprovalPage = () => {
           )}
 
           {/* Approval Cards */}
-          {filteredApprovals.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+            </div>
+          ) : filteredApprovals.length === 0 ? (
             <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-12 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
               <MaterialSymbol name="verified_user" className="text-gray-400 dark:text-gray-600 mx-auto mb-4" size={64} />
               <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
@@ -308,7 +260,7 @@ export const FemaleApprovalPage = () => {
                     approval={approval}
                     onApprove={handleApprove}
                     onReject={handleReject}
-                    onRequestInfo={handleRequestInfo}
+                    onResubmitRequest={handleResubmitRequest}
                   />
                 </div>
               ))}

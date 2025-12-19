@@ -2,27 +2,13 @@
 
 export interface SignupData {
   fullName: string;
-  email: string;
   phone: string; // Without +91 prefix
 }
 
 export interface BasicProfileData {
   dateOfBirth: string; // ISO date string
   gender: 'male' | 'female' | 'prefer-not-to-say';
-}
-
-export interface PreferencesData {
-  showMe: 'men' | 'women' | 'both';
-  ageRange: {
-    min: number;
-    max: number;
-  };
-  distanceRange: number; // in km
-  lifestylePreferences?: {
-    smoking?: boolean;
-    drinking?: boolean;
-    relationshipGoals?: string;
-  };
+  location: string; // User location (City, Area) - Google Maps Integration Future
 }
 
 export interface InterestsData {
@@ -34,12 +20,11 @@ export interface InterestsData {
 export interface OnboardingData {
   signup: SignupData;
   basicProfile: BasicProfileData;
-  preferences: PreferencesData;
   interests: InterestsData;
 }
 
 export interface LoginData {
-  email?: string;
-  phone?: string; // Without +91 prefix
+  phone: string; // Without +91 prefix
+  // password? for later
 }
 

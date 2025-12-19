@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../core/context/AuthContext';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { WalletBalance } from '../components/WalletBalance';
 import { StatsGrid } from '../components/StatsGrid';
@@ -69,11 +70,12 @@ const mockUserBadges: Badge[] = [
 ];
 
 // Mock data - replace with actual API calls
+// Mock data - replace with actual API calls
 const mockDashboardData: MaleDashboardData = {
   user: {
     id: '1',
-    name: 'Alex',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD50-ii2k9PzO4qeyW-OGHjX-2FkC-nA5ibp8nilOmxqIs-w6h7s0urlDqev0gVBZWdyFA_3jZ4auAmlsmmGZJtFVeTHiGW7cqwg60iSjQAedJk4JqEbDkQMBYmK31cVtDFsUHahf8u_-Do3G7K2GnansIQaBcgPSJLc7jSTEJr1GNKy9Kpkbb0A-qm4L0Ul1Bd5sSiBcUw8P2BA8K3VMWLs47qnJbJahDqGtp9UA5PPVTWdJ5atRHa8i9VBLDRrbIoeoOw1THR6BI',
+    name: 'User',
+    avatar: 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
     isPremium: true,
     isOnline: true,
     badges: mockUserBadges,
@@ -135,11 +137,22 @@ const mockDashboardData: MaleDashboardData = {
 export const MaleDashboard = () => {
   const [dashboardData] = useState<MaleDashboardData>(mockDashboardData);
   const navigate = useNavigate();
+  const { user, isLoading } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // window.scrollTo(0, 0); 
   }, []);
+
+  const displayedUser = user ? {
+    name: user.name || 'Anonymous',
+    avatar: user.avatarUrl || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
+    isPremium: false,
+    isOnline: true,
+  } : (isLoading ? {
+    ...dashboardData.user,
+    name: 'Loading...',
+  } : dashboardData.user);
 
   const handleNotificationClick = () => {
     navigate('/male/notifications');
@@ -195,7 +208,7 @@ export const MaleDashboard = () => {
       <div className="flex p-4 pt-4 @container">
         <div className="flex w-full flex-col gap-4">
           <ProfileHeader
-            user={dashboardData.user}
+            user={displayedUser}
             onNotificationClick={handleNotificationClick}
           />
           {/* Wallet & Top Up Block */}
@@ -229,8 +242,8 @@ export const MaleDashboard = () => {
                   View All
                 </button>
               </div>
-              <BadgeDisplay 
-                badges={dashboardData.user.badges} 
+              <BadgeDisplay
+                badges={dashboardData.user.badges}
                 maxDisplay={6}
                 showUnlockedOnly={true}
                 compact={true}

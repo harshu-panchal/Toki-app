@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../core/context/AuthContext';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { EarningsCard } from '../components/EarningsCard';
 import { FemaleStatsGrid } from '../components/FemaleStatsGrid';
@@ -75,11 +76,29 @@ const quickActions = [
 export const FemaleDashboard = () => {
   const [dashboardData] = useState<FemaleDashboardData>(mockDashboardData);
   const navigate = useNavigate();
+  const { user } = useAuth(); // Get user from auth context
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
 
   useEffect(() => {
+    // window.scrollTo(0, 0); // Moved to other effect or keep separately
+  }, [user]);
+
+  // Derived state for user profile to ensure real data is shown if authenticated
+  const displayedUser = user ? {
+    name: user.name || 'Anonymous',
+    avatar: user.avatarUrl || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
+    isPremium: false,
+    isOnline: true,
+  } : dashboardData.user;
+
+  useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+
+    // Protect route: Redirect if not approved
+    if (user && user.role === 'female' && user.approvalStatus !== 'approved') {
+      navigate('/verification-pending');
+    }
+  }, [user, navigate]);
 
   const handleNotificationClick = () => {
     navigate('/female/notifications');
@@ -102,24 +121,24 @@ export const FemaleDashboard = () => {
   };
 
 
-      const handleQuickActionClick = (actionId: string) => {
-        switch (actionId) {
-          case 'earnings':
-            navigate('/female/earnings');
-            break;
-          case 'withdraw':
-            navigate('/female/withdrawal');
-            break;
-          case 'trade-gifts':
-            navigate('/female/trade-gifts');
-            break;
-          case 'auto-messages':
-            navigate('/female/auto-messages');
-            break;
-          default:
-            break;
-        }
-      };
+  const handleQuickActionClick = (actionId: string) => {
+    switch (actionId) {
+      case 'earnings':
+        navigate('/female/earnings');
+        break;
+      case 'withdraw':
+        navigate('/female/withdrawal');
+        break;
+      case 'trade-gifts':
+        navigate('/female/trade-gifts');
+        break;
+      case 'auto-messages':
+        navigate('/female/auto-messages');
+        break;
+      default:
+        break;
+    }
+  };
 
   return (
     <div className="relative flex w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-20">
@@ -138,7 +157,7 @@ export const FemaleDashboard = () => {
       <div className="flex p-4 pt-4 @container">
         <div className="flex w-full flex-col gap-4">
           <ProfileHeader
-            user={dashboardData.user}
+            user={displayedUser}
             onNotificationClick={handleNotificationClick}
           />
           {/* Earnings Card */}

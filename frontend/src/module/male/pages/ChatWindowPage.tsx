@@ -18,7 +18,7 @@ const MESSAGE_COST = 50;
 export const ChatWindowPage = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
-  const { coinBalance, updateBalance } = useGlobalState(); // Use global state
+  const { coinBalance, updateBalance, user } = useGlobalState(); // Use global state
 
   const [messages, setMessages] = useState<ApiMessage[]>([]);
   const [chatInfo, setChatInfo] = useState<ApiChat | null>(null);
@@ -37,7 +37,7 @@ export const ChatWindowPage = () => {
   const [isOtherTyping, setIsOtherTyping] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const currentUserId = JSON.parse(localStorage.getItem('matchmint_user') || '{}')._id;
+  const currentUserId = user?._id || (user as any)?.id;
 
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -115,16 +115,39 @@ export const ChatWindowPage = () => {
       }
     };
 
+    // User online/offline status updates
+    const handleUserOnline = (data: { userId: string }) => {
+      if (chatInfo && data.userId === chatInfo.otherUser._id) {
+        setChatInfo(prev => prev ? {
+          ...prev,
+          otherUser: { ...prev.otherUser, isOnline: true }
+        } : null);
+      }
+    };
+
+    const handleUserOffline = (data: { userId: string; lastSeen: string }) => {
+      if (chatInfo && data.userId === chatInfo.otherUser._id) {
+        setChatInfo(prev => prev ? {
+          ...prev,
+          otherUser: { ...prev.otherUser, isOnline: false, lastSeen: data.lastSeen }
+        } : null);
+      }
+    };
+
     socketService.on('message:new', handleNewMessage);
     socketService.on('chat:typing', handleTyping);
     socketService.on('intimacy:levelup', handleLevelUp);
+    socketService.on('user:online', handleUserOnline);
+    socketService.on('user:offline', handleUserOffline);
 
     return () => {
       socketService.off('message:new', handleNewMessage);
       socketService.off('chat:typing', handleTyping);
       socketService.off('intimacy:levelup', handleLevelUp);
+      socketService.off('user:online', handleUserOnline);
+      socketService.off('user:offline', handleUserOffline);
     };
-  }, [chatId, currentUserId, scrollToBottom]);
+  }, [chatId, chatInfo, currentUserId, scrollToBottom]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -282,23 +305,39 @@ export const ChatWindowPage = () => {
           </div>
         )}
 
-        {messages.map((message) => (
-          <MessageBubble
-            key={message._id}
-            message={{
-              id: message._id,
-              chatId: message.chatId,
-              senderId: message.senderId._id,
-              senderName: message.senderId.profile?.name || 'User',
-              content: message.content,
-              timestamp: new Date(message.createdAt),
-              type: message.messageType === 'video_call' ? 'text' : message.messageType as any,
-              isSent: message.senderId._id === currentUserId,
-              readStatus: message.status === 'failed' ? 'sent' : message.status as any,
-              gifts: message.gift ? [message.gift] as any : undefined,
-            }}
-          />
-        ))}
+        {messages.map((message) => {
+          // Robust sender ID extraction
+          let senderId;
+          if (typeof message.senderId === 'string') {
+            senderId = message.senderId;
+          } else if (message.senderId) {
+            senderId = message.senderId._id || (message.senderId as any).id;
+          }
+
+          const isSent = String(senderId) === String(currentUserId);
+
+          const senderName = (typeof message.senderId === 'object' && message.senderId)
+            ? message.senderId.profile?.name
+            : 'User';
+
+          return (
+            <MessageBubble
+              key={message._id}
+              message={{
+                id: message._id,
+                chatId: message.chatId,
+                senderId: String(senderId),
+                senderName: senderName || 'User',
+                content: message.content,
+                timestamp: new Date(message.createdAt),
+                type: message.messageType === 'video_call' ? 'text' : message.messageType as any,
+                isSent,
+                readStatus: message.status === 'failed' ? 'sent' : message.status as any,
+                gifts: message.gift ? [message.gift] as any : undefined,
+              }}
+            />
+          );
+        })}
 
         {/* Typing Indicator */}
         {isOtherTyping && (

@@ -29,12 +29,20 @@ export const getMyChatList = async (req, res, next) => {
 
         // Transform chats for frontend
         const transformedChats = chats.map(chat => {
+            // Ensure userId is compared as string
+            const currentUserId = userId.toString();
+
             const otherParticipant = chat.participants.find(
-                p => p.userId._id.toString() !== userId
+                p => p.userId._id.toString() !== currentUserId
             );
             const myParticipant = chat.participants.find(
-                p => p.userId._id.toString() === userId
+                p => p.userId._id.toString() === currentUserId
             );
+
+            // Safety check - if no other participant found, skip this chat
+            if (!otherParticipant || !myParticipant) {
+                return null;
+            }
 
             return {
                 _id: chat._id,
@@ -51,7 +59,7 @@ export const getMyChatList = async (req, res, next) => {
                 createdAt: chat.createdAt,
                 intimacy: getLevelInfo(chat.totalMessageCount || 0),
             };
-        });
+        }).filter(Boolean); // Remove null entries
 
         res.status(200).json({
             status: 'success',
@@ -106,12 +114,14 @@ export const getOrCreateChat = async (req, res, next) => {
                 .populate('lastMessage');
         }
 
-        // Transform for frontend
+        // Transform for frontend - ensure string comparison
+        const currentUserId = userId.toString();
+
         const otherParticipant = chat.participants.find(
-            p => p.userId._id.toString() !== userId
+            p => p.userId._id.toString() !== currentUserId
         );
         const myParticipant = chat.participants.find(
-            p => p.userId._id.toString() === userId
+            p => p.userId._id.toString() === currentUserId
         );
 
         const transformedChat = {
@@ -125,7 +135,7 @@ export const getOrCreateChat = async (req, res, next) => {
             },
             lastMessage: chat.lastMessage,
             lastMessageAt: chat.lastMessageAt,
-            unreadCount: myParticipant.unreadCount,
+            unreadCount: myParticipant?.unreadCount || 0,
             createdAt: chat.createdAt,
             intimacy: getLevelInfo(chat.totalMessageCount || 0),
         };
@@ -158,13 +168,19 @@ export const getChatById = async (req, res, next) => {
             throw new NotFoundError('Chat not found');
         }
 
-        // Transform for frontend
+        // Transform for frontend - ensure string comparison
+        const currentUserId = userId.toString();
+
         const otherParticipant = chat.participants.find(
-            p => p.userId._id.toString() !== userId
+            p => p.userId._id.toString() !== currentUserId
         );
         const myParticipant = chat.participants.find(
-            p => p.userId._id.toString() === userId
+            p => p.userId._id.toString() === currentUserId
         );
+
+        if (!otherParticipant || !myParticipant) {
+            throw new NotFoundError('Invalid chat participants');
+        }
 
         const transformedChat = {
             _id: chat._id,

@@ -28,7 +28,8 @@ export const ChatWindowPage = () => {
   const [isOtherTyping, setIsOtherTyping] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const currentUserId = JSON.parse(localStorage.getItem('matchmint_user') || '{}')._id;
+  const user = JSON.parse(localStorage.getItem('matchmint_user') || '{}');
+  const currentUserId = user._id || user.id;
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -90,14 +91,37 @@ export const ChatWindowPage = () => {
       }
     };
 
+    // User online/offline status updates
+    const handleUserOnline = (data: { userId: string }) => {
+      if (chatInfo && data.userId === chatInfo.otherUser._id) {
+        setChatInfo(prev => prev ? {
+          ...prev,
+          otherUser: { ...prev.otherUser, isOnline: true }
+        } : null);
+      }
+    };
+
+    const handleUserOffline = (data: { userId: string; lastSeen: string }) => {
+      if (chatInfo && data.userId === chatInfo.otherUser._id) {
+        setChatInfo(prev => prev ? {
+          ...prev,
+          otherUser: { ...prev.otherUser, isOnline: false, lastSeen: data.lastSeen }
+        } : null);
+      }
+    };
+
     socketService.on('message:new', handleNewMessage);
     socketService.on('chat:typing', handleTyping);
+    socketService.on('user:online', handleUserOnline);
+    socketService.on('user:offline', handleUserOffline);
 
     return () => {
       socketService.off('message:new', handleNewMessage);
       socketService.off('chat:typing', handleTyping);
+      socketService.off('user:online', handleUserOnline);
+      socketService.off('user:offline', handleUserOffline);
     };
-  }, [chatId, currentUserId, scrollToBottom]);
+  }, [chatId, chatInfo, currentUserId, scrollToBottom]);
 
   useEffect(() => {
     scrollToBottom();
@@ -121,17 +145,7 @@ export const ChatWindowPage = () => {
     }
   };
 
-  const handleTypingStart = () => {
-    if (chatId) {
-      socketService.sendTyping(chatId, true);
-    }
-  };
 
-  const handleTypingStop = () => {
-    if (chatId) {
-      socketService.sendTyping(chatId, false);
-    }
-  };
 
   const handleMoreClick = () => {
     setIsMoreOptionsOpen(true);
@@ -191,8 +205,26 @@ export const ChatWindowPage = () => {
           </div>
         )}
 
-        {messages.map((message) => (
-          message.messageType === 'gift' && message.gift ? (
+        {messages.map((message) => {
+          // Robust sender ID extraction
+          let senderId;
+          if (typeof message.senderId === 'string') {
+            senderId = message.senderId;
+          } else if (message.senderId) {
+            senderId = message.senderId._id || (message.senderId as any).id;
+          }
+
+          // Robust current user ID extraction
+          const user = JSON.parse(localStorage.getItem('matchmint_user') || '{}');
+          const currentUserId = user._id || user.id;
+
+          const isSent = String(senderId) === String(currentUserId);
+
+          const senderName = (typeof message.senderId === 'object' && message.senderId)
+            ? message.senderId.profile?.name
+            : 'User';
+
+          return message.messageType === 'gift' && message.gift ? (
             <GiftMessageBubble
               key={message._id}
               gifts={[{
@@ -204,13 +236,13 @@ export const ChatWindowPage = () => {
                 description: '',
                 category: 'romantic',
                 receivedAt: new Date(message.createdAt),
-                senderId: message.senderId._id,
-                senderName: message.senderId.profile?.name || 'User',
+                senderId: String(senderId),
+                senderName: senderName || 'User',
                 quantity: 1,
               }]}
               note=""
               timestamp={new Date(message.createdAt)}
-              senderName={message.senderId.profile?.name || 'User'}
+              senderName={senderName || 'User'}
             />
           ) : (
             <MessageBubble
@@ -218,17 +250,17 @@ export const ChatWindowPage = () => {
               message={{
                 id: message._id,
                 chatId: message.chatId,
-                senderId: message.senderId._id,
-                senderName: message.senderId.profile?.name || 'User',
+                senderId: String(senderId),
+                senderName: senderName || 'User',
                 content: message.content,
                 timestamp: new Date(message.createdAt),
                 type: message.messageType as any,
-                isSent: message.senderId._id === currentUserId,
+                isSent,
                 readStatus: message.status as any,
               }}
             />
-          )
-        ))}
+          );
+        })}
 
         {/* Typing Indicator */}
         {isOtherTyping && (
@@ -249,8 +281,6 @@ export const ChatWindowPage = () => {
       <MessageInput
         onSendMessage={handleSendMessage}
         onSendPhoto={() => setIsPhotoPickerOpen(true)}
-        onTypingStart={handleTypingStart}
-        onTypingStop={handleTypingStop}
         placeholder="Type a message..."
         disabled={isSending}
       />

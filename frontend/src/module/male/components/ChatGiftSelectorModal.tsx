@@ -114,7 +114,7 @@ export const ChatGiftSelectorModal = ({
               <div className="flex items-center gap-1">
                 <span className="text-lg">🪙</span>
                 <span className="text-lg font-bold text-amber-700 dark:text-amber-300">
-                  {coinBalance.toLocaleString()} coins
+                  {(coinBalance || 0).toLocaleString()} coins
                 </span>
               </div>
             </div>

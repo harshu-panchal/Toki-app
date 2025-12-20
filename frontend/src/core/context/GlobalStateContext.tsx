@@ -97,7 +97,8 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
     const refreshBalance = useCallback(async () => {
         try {
             const data = await walletService.getBalance();
-            updateBalance(data.coinBalance);
+            // Backend returns { balance: number }, not { coinBalance }
+            updateBalance(data.balance || data.coinBalance || 0);
         } catch (error) {
             console.error('Failed to refresh balance:', error);
         }
@@ -124,11 +125,9 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
         const handleConnect = () => setIsConnected(true);
         const handleDisconnect = () => setIsConnected(false);
 
-        // Handle balance updates
-        const handleBalanceUpdate = (data: { userId: string; newBalance: number }) => {
-            if (data.userId === user._id) {
-                updateBalance(data.newBalance);
-            }
+        // Handle balance updates - backend sends { balance: number }
+        const handleBalanceUpdate = (data: { balance: number }) => {
+            updateBalance(data.balance);
         };
 
         // Handle user updates (profile changes, online status, etc.)

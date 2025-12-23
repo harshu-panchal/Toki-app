@@ -185,6 +185,16 @@ export const getMyTransactions = async (params?: {
 };
 
 /**
+ * Get earnings summary (Female only)
+ */
+export const getEarningsSummary = async () => {
+    const response = await axios.get(`${API_URL}/wallet/earnings-summary`, {
+        headers: getAuthHeaders(),
+    });
+    return response.data.data;
+};
+
+/**
  * Get all transactions (Admin only)
  */
 export const getAllTransactions = async (params?: {
@@ -317,6 +327,7 @@ export default {
     getBalance,
     getGifts,
     getMyTransactions,
+    getEarningsSummary,
     getAllTransactions,
     // Withdrawals (Female)
     requestWithdrawal,

@@ -9,10 +9,14 @@ import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { WalletBalance } from '../components/WalletBalance';
+import { useGlobalState } from '../../../core/context/GlobalStateContext';
+
 import { StatsGrid } from '../components/StatsGrid';
 import { QuickActionsGrid } from '../components/QuickActionsGrid';
 import { BadgeDisplay } from '../../../shared/components/BadgeDisplay';
+import userService from '../../../core/services/user.service';
 import type { Badge } from '../types/male.types';
+
 
 
 // Mock data - replace with actual API calls
@@ -113,21 +117,32 @@ const mockDashboardData = {
 
 export const MyProfilePage = () => {
   const navigate = useNavigate();
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser, logout, isLoading: isAuthLoading } = useAuth();
+  const { coinBalance } = useGlobalState();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
+  const [stats, setStats] = useState({
+    matches: 0,
+    sent: 0,
+    views: 0,
+    coinsSpent: 0
+  });
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
   const [profile, setProfile] = useState(mockProfile);
-  const [showOnlineStatus, setShowOnlineStatus] = useState(true);
-  const [allowMessagesFrom, setAllowMessagesFrom] = useState<'everyone' | 'verified'>('everyone');
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    const fetchStats = async () => {
+      try {
+        const data = await userService.getMeStats();
+        if (data) setStats(data);
+      } catch (err) {
+        console.error('Failed to fetch stats:', err);
+      }
+    };
+    fetchStats();
   }, []);
 
   useEffect(() => {
@@ -174,6 +189,14 @@ export const MyProfilePage = () => {
   };
 
 
+  if (isAuthLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-white pb-24 min-h-screen">
       {/* Top Navbar */}
@@ -197,18 +220,18 @@ export const MyProfilePage = () => {
               isPremium: false,
               isOnline: true,
             }}
-            onArrowClick={() => navigate('/male/my-profile/profile')}
+            onEditClick={() => navigate('/male/my-profile/profile')}
           />
           {/* Wallet & Top Up Block */}
           <WalletBalance
-            balance={mockDashboardData.wallet.balance}
+            balance={coinBalance}
             onTopUpClick={handleTopUpClick}
           />
         </div>
       </div>
 
       {/* Stats Grid */}
-      <StatsGrid stats={mockDashboardData.stats} />
+      <StatsGrid stats={stats} />
 
       {/* Badges Section */}
       {mockDashboardData.user.badges && mockDashboardData.user.badges.length > 0 && (
@@ -289,19 +312,19 @@ export const MyProfilePage = () => {
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{mockStats.profileViews}</div>
+              <div className="text-2xl font-bold text-primary">{stats.views}</div>
               <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Profile Views</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{mockStats.matches}</div>
+              <div className="text-2xl font-bold text-primary">{stats.matches}</div>
               <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Matches</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{mockStats.messagesSent}</div>
+              <div className="text-2xl font-bold text-primary">{stats.sent}</div>
               <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Messages Sent</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{mockStats.coinsSpent}</div>
+              <div className="text-2xl font-bold text-primary">{stats.coinsSpent}</div>
               <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Coins Spent</div>
             </div>
           </div>
@@ -311,80 +334,9 @@ export const MyProfilePage = () => {
         <div className="bg-white dark:bg-[#342d18] rounded-2xl p-4 shadow-sm space-y-4">
           <h3 className="font-semibold mb-3">Profile Settings</h3>
 
-          {/* Privacy Settings */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Privacy</h4>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MaterialSymbol name="visibility" size={20} className="text-gray-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Show Online Status</span>
-              </div>
-              <button
-                onClick={() => setShowOnlineStatus(!showOnlineStatus)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${showOnlineStatus ? 'bg-primary' : 'bg-gray-300'
-                  }`}
-              >
-                <div
-                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${showOnlineStatus ? 'translate-x-6' : ''
-                    }`}
-                />
-              </button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MaterialSymbol name="chat" size={20} className="text-gray-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Who Can Message Me</span>
-              </div>
-              <select
-                value={allowMessagesFrom}
-                onChange={(e) => setAllowMessagesFrom(e.target.value as 'everyone' | 'verified')}
-                className="px-3 py-1 bg-gray-100 dark:bg-[#2f151e] border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
-              >
-                <option value="everyone">Everyone</option>
-                <option value="verified">Verified Only</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Notification Settings */}
-          <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Notifications</h4>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MaterialSymbol name="email" size={20} className="text-gray-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Email Notifications</span>
-              </div>
-              <button
-                onClick={() => setEmailNotifications(!emailNotifications)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${emailNotifications ? 'bg-primary' : 'bg-gray-300'
-                  }`}
-              >
-                <div
-                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${emailNotifications ? 'translate-x-6' : ''
-                    }`}
-                />
-              </button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MaterialSymbol name="notifications" size={20} className="text-gray-500" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Push Notifications</span>
-              </div>
-              <button
-                onClick={() => setPushNotifications(!pushNotifications)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${pushNotifications ? 'bg-primary' : 'bg-gray-300'
-                  }`}
-              >
-                <div
-                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${pushNotifications ? 'translate-x-6' : ''
-                    }`}
-                />
-              </button>
-            </div>
-          </div>
 
           {/* Account Settings */}
-          <div className="space-y-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="space-y-2">
             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Account</h4>
             <button
               onClick={() => navigate('/male/badges')}

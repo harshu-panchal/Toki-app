@@ -81,7 +81,7 @@ export const CoinPlanCard = ({
         <h1 className={`${getTierColor()} text-sm font-bold uppercase tracking-wider`}>
           {tier.charAt(0).toUpperCase() + tier.slice(1)}
         </h1>
-        <p className="flex flex-col gap-0">
+        <div className="flex flex-col gap-0">
           <div className="flex items-baseline gap-2">
             <span className={`${isPopular || isBestValue ? 'text-3xl' : 'text-2xl'} font-black tracking-tight`}>
               ₹{price.toLocaleString()}
@@ -111,7 +111,7 @@ export const CoinPlanCard = ({
               {bonus}
             </span>
           )}
-        </p>
+        </div>
       </div>
 
       <div className={isPopular || isBestValue ? 'mt-4' : 'mt-auto pt-2'}>

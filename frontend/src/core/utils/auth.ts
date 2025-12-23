@@ -3,6 +3,7 @@
  * @owner: Sujal (Shared - Both review)
  * @purpose: Token management and authentication helpers
  */
+import { UserProfile } from '../types/global';
 
 const TOKEN_KEY = 'matchmint_auth_token';
 const REFRESH_TOKEN_KEY = 'matchmint_refresh_token';
@@ -95,5 +96,32 @@ export const fetchUserProfile = async (): Promise<any> => {
     headers: { Authorization: `Bearer ${token}` }
   });
   return response.data.data.user;
+};
+
+/**
+ * Map backend user object to frontend UserProfile
+ */
+export const mapUserToProfile = (user: any): UserProfile => {
+  if (!user) return null as any;
+
+  return {
+    id: user._id || user.id,
+    phoneNumber: user.phoneNumber,
+    role: user.role,
+    name: user.name || user.fullName || user.profile?.name || 'User',
+    avatarUrl: user.avatarUrl || user.primaryPhoto || user.profile?.photos?.find((p: any) => p.isPrimary)?.url || user.profile?.photos?.[0]?.url || '',
+    photos: user.profile?.photos?.map((p: any) => p.url) || [],
+    age: user.profile?.age,
+    bio: user.profile?.bio,
+    city: user.profile?.location?.city,
+    location: user.profile?.location ? `${user.profile.location.city || ''}, ${user.profile.location.country || ''}`.replace(/^, |, $/g, '') : undefined,
+    interests: user.profile?.interests || [],
+    occupation: user.profile?.occupation,
+    isVerified: user.isVerified,
+    approvalStatus: user.approvalStatus,
+    rejectionReason: user.rejectionReason,
+    coinBalance: user.coinBalance,
+    memberTier: user.memberTier,
+  };
 };
 

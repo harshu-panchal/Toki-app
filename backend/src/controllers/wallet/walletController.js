@@ -4,6 +4,7 @@
  * @purpose: Handle coin plans, purchases, withdrawals, and transactions
  */
 
+import mongoose from 'mongoose';
 import CoinPlan from '../../models/CoinPlan.js';
 import PayoutSlab from '../../models/PayoutSlab.js';
 import Transaction from '../../models/Transaction.js';
@@ -263,6 +264,142 @@ export const getMyTransactions = async (req, res, next) => {
                     limit: parseInt(limit),
                     total,
                     totalPages: Math.ceil(total / limit)
+                }
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get earnings summary for female users
+ */
+export const getEarningsSummary = async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const currentUserId = new mongoose.Types.ObjectId(userId);
+
+        // 1. Total Earnings (Sum of all credit earnings)
+        const totalEarningsData = await Transaction.aggregate([
+            {
+                $match: {
+                    userId: currentUserId,
+                    direction: 'credit',
+                    type: { $in: ['message_earned', 'video_call_earned', 'gift_received'] },
+                    status: 'completed'
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: '$amountCoins' }
+                }
+            }
+        ]);
+        const totalEarnings = totalEarningsData.length > 0 ? totalEarningsData[0].total : 0;
+
+        // 2. Earnings by Type
+        const earningsByTypeData = await Transaction.aggregate([
+            {
+                $match: {
+                    userId: currentUserId,
+                    direction: 'credit',
+                    type: { $in: ['message_earned', 'video_call_earned', 'gift_received'] },
+                    status: 'completed'
+                }
+            },
+            {
+                $group: {
+                    _id: '$type',
+                    amount: { $sum: '$amountCoins' }
+                }
+            }
+        ]);
+
+        const earningsByType = {
+            message_earned: 0,
+            video_call_earned: 0,
+            gift_received: 0
+        };
+
+        earningsByTypeData.forEach(item => {
+            earningsByType[item._id] = item.amount;
+        });
+
+        // 3. User Balance
+        const user = await User.findById(userId).select('coinBalance');
+
+        // 4. Period Stats
+        const now = new Date();
+        const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
+
+        const d = new Date();
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const startOfWeek = new Date(d.setDate(diff));
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const monthlyEarningsData = await Transaction.aggregate([
+            {
+                $match: {
+                    userId: currentUserId,
+                    direction: 'credit',
+                    type: { $in: ['message_earned', 'video_call_earned', 'gift_received'] },
+                    status: 'completed',
+                    createdAt: { $gte: startOfMonth }
+                }
+            },
+            {
+                $group: { _id: null, total: { $sum: '$amountCoins' } }
+            }
+        ]);
+        const monthlyEarnings = monthlyEarningsData.length > 0 ? monthlyEarningsData[0].total : 0;
+
+        const weeklyEarningsData = await Transaction.aggregate([
+            {
+                $match: {
+                    userId: currentUserId,
+                    direction: 'credit',
+                    type: { $in: ['message_earned', 'video_call_earned', 'gift_received'] },
+                    status: 'completed',
+                    createdAt: { $gte: startOfWeek }
+                }
+            },
+            {
+                $group: { _id: null, total: { $sum: '$amountCoins' } }
+            }
+        ]);
+        const weeklyEarnings = weeklyEarningsData.length > 0 ? weeklyEarningsData[0].total : 0;
+
+        const dailyEarningsData = await Transaction.aggregate([
+            {
+                $match: {
+                    userId: currentUserId,
+                    direction: 'credit',
+                    type: { $in: ['message_earned', 'video_call_earned', 'gift_received'] },
+                    status: 'completed',
+                    createdAt: { $gte: startOfDay }
+                }
+            },
+            {
+                $group: { _id: null, total: { $sum: '$amountCoins' } }
+            }
+        ]);
+        const dailyEarnings = dailyEarningsData.length > 0 ? dailyEarningsData[0].total : 0;
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                totalEarnings,
+                availableBalance: user.coinBalance,
+                earningsByType,
+                periodStats: {
+                    daily: dailyEarnings,
+                    weekly: weeklyEarnings,
+                    monthly: monthlyEarnings
                 }
             }
         });

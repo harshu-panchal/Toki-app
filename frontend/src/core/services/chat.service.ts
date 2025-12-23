@@ -117,15 +117,35 @@ export const sendHiMessage = async (receiverId: string) => {
 /**
  * Send gift
  */
-export const sendGift = async (chatId: string, giftIds: string[]) => {
+export const sendGift = async (chatId: string, giftIds: string[], content?: string) => {
     const response = await axios.post(
         `${API_URL}/chat/messages/gift`,
-        { chatId, giftIds },
+        { chatId, giftIds, content },
         {
             headers: getAuthHeaders(),
         }
     );
     return response.data.data;
+};
+
+/**
+ * Get available gifts
+ */
+export const getAvailableGifts = async () => {
+    const response = await axios.get(`${API_URL}/chat/gifts`, {
+        headers: getAuthHeaders(),
+    });
+    return response.data.data.gifts;
+};
+
+/**
+ * Get gift history
+ */
+export const getGiftHistory = async () => {
+    const response = await axios.get(`${API_URL}/chat/history/gifts`, {
+        headers: getAuthHeaders(),
+    });
+    return response.data.data.history;
 };
 
 // Export as default object
@@ -138,4 +158,6 @@ export default {
     sendMessage,
     sendHiMessage,
     sendGift,
+    getAvailableGifts,
+    getGiftHistory,
 };

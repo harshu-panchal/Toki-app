@@ -6,116 +6,38 @@ import { AdminSidebar } from '../components/AdminSidebar';
 import { UserTable } from '../components/UserTable';
 import { useAdminNavigation } from '../hooks/useAdminNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
+import adminService from '../../../core/services/admin.service';
 import type { AdminUser } from '../types/admin.types';
 
-// Mock data - replace with actual API calls
-const mockUsers: AdminUser[] = [
-  {
-    id: '1',
-    email: 'john.doe@example.com',
-    name: 'John Doe',
-    role: 'male',
-    isBlocked: false,
-    isVerified: true,
-    createdAt: '2024-01-01T10:00:00Z',
-    lastLoginAt: new Date(Date.now() - 3600000).toISOString(),
-    profile: {
-      age: 28,
-      city: 'Mumbai',
-      bio: 'Love traveling and photography',
-      photos: [],
-    },
-  },
-  {
-    id: '2',
-    email: 'sarah.smith@example.com',
-    name: 'Sarah Smith',
-    role: 'female',
-    isBlocked: false,
-    isVerified: true,
-    createdAt: '2024-01-05T14:30:00Z',
-    lastLoginAt: new Date(Date.now() - 7200000).toISOString(),
-    profile: {
-      age: 25,
-      city: 'Delhi',
-      bio: 'Fitness enthusiast and food lover',
-      photos: [],
-    },
-  },
-  {
-    id: '3',
-    email: 'michael.brown@example.com',
-    name: 'Michael Brown',
-    role: 'male',
-    isBlocked: true,
-    isVerified: false,
-    createdAt: '2024-01-10T09:15:00Z',
-    lastLoginAt: new Date(Date.now() - 86400000).toISOString(),
-    profile: {
-      age: 32,
-      city: 'Bangalore',
-      bio: 'Software engineer',
-      photos: [],
-    },
-  },
-  {
-    id: '4',
-    email: 'emily.johnson@example.com',
-    name: 'Emily Johnson',
-    role: 'female',
-    isBlocked: false,
-    isVerified: false,
-    createdAt: '2024-01-12T16:45:00Z',
-    lastLoginAt: new Date(Date.now() - 1800000).toISOString(),
-    profile: {
-      age: 23,
-      city: 'Pune',
-      bio: 'Artist and creative soul',
-      photos: [],
-    },
-  },
-  {
-    id: '5',
-    email: 'david.wilson@example.com',
-    name: 'David Wilson',
-    role: 'male',
-    isBlocked: false,
-    isVerified: true,
-    createdAt: '2024-01-15T11:20:00Z',
-    lastLoginAt: new Date(Date.now() - 300000).toISOString(),
-    profile: {
-      age: 29,
-      city: 'Chennai',
-      bio: 'Music producer and DJ',
-      photos: [],
-    },
-  },
-  {
-    id: '6',
-    email: 'jessica.martinez@example.com',
-    name: 'Jessica Martinez',
-    role: 'female',
-    isBlocked: false,
-    isVerified: true,
-    createdAt: '2024-01-18T13:10:00Z',
-    lastLoginAt: new Date(Date.now() - 5400000).toISOString(),
-    profile: {
-      age: 27,
-      city: 'Hyderabad',
-      bio: 'Yoga instructor and wellness coach',
-      photos: [],
-    },
-  },
-];
+
+// Real users are fetched from the backend API
 
 export const UsersManagementPage = () => {
   const navigate = useNavigate();
-  const [users, setUsers] = useState<AdminUser[]>(mockUsers);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({ search: '', role: 'all', status: 'all' });
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useAdminNavigation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    fetchUsers();
+  }, [page, filters]);
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      const data = await adminService.listUsers(filters, page, 20);
+      setUsers(data.users);
+      setTotal(data.total);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleUserClick = (user: AdminUser) => {
     navigate(`/admin/users/${user.id}`);
@@ -186,7 +108,7 @@ export const UsersManagementPage = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Users</p>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {users.length}
+                    {total}
                   </p>
                 </div>
                 <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md">

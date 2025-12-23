@@ -92,10 +92,32 @@ export const updateMyProfile = async (data: Partial<UserProfile>) => {
     return response.data.data.user;
 };
 
+/**
+ * Get current user stats
+ */
+export const getMeStats = async () => {
+    const response = await axios.get(`${API_URL}/users/me/stats`, {
+        headers: getAuthHeaders(),
+    });
+    return response.data.data.stats;
+};
+
+/**
+ * Get female dashboard data
+ */
+export const getFemaleDashboardData = async () => {
+    const response = await axios.get(`${API_URL}/users/female/dashboard`, {
+        headers: getAuthHeaders(),
+    });
+    return response.data.data;
+};
+
 // Export as default object
 export default {
+    getMeStats,
     discoverFemales,
     getUserProfile,
     getMyProfile,
     updateMyProfile,
+    getFemaleDashboardData,
 };

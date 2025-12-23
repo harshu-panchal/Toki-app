@@ -1,0 +1,61 @@
+/**
+ * App Settings Model - Global Platform Configuration
+ * @owner: Sujal (Admin Domain)
+ * @purpose: Store platform-wide settings like costs, limits, and maintenance mode
+ */
+
+import mongoose from 'mongoose';
+
+const appSettingsSchema = new mongoose.Schema(
+    {
+        general: {
+            platformName: { type: String, default: 'MatchMint' },
+            supportEmail: { type: String, default: 'support@matchmint.com' },
+            supportPhone: { type: String, default: '+91 9876543210' },
+            termsOfServiceUrl: { type: String, default: '' },
+            privacyPolicyUrl: { type: String, default: '' },
+            maintenanceMode: { type: Boolean, default: false },
+            registrationEnabled: { type: Boolean, default: true },
+        },
+        withdrawal: {
+            minAmount: { type: Number, default: 500 },
+            maxAmount: { type: Number, default: 50000 },
+            processingFee: { type: Number, default: 0 },
+            dailyLimit: { type: Number, default: 10000 },
+            weeklyLimit: { type: Number, default: 50000 },
+        },
+        messageCosts: {
+            // Tier-based message costs (for regular messages)
+            basic: { type: Number, default: 50 },
+            silver: { type: Number, default: 45 },
+            gold: { type: Number, default: 40 },
+            platinum: { type: Number, default: 35 },
+
+            // Special message types
+            hiMessage: { type: Number, default: 5 },
+
+            // Video call cost
+            videoCall: { type: Number, default: 500 },
+        },
+        giftCosts: {
+            // Default cost for new gifts
+            defaultCost: { type: Number, default: 100 },
+        }
+    },
+    {
+        timestamps: true,
+    }
+);
+
+// We only ever want ONE settings document
+appSettingsSchema.statics.getSettings = async function () {
+    let settings = await this.findOne();
+    if (!settings) {
+        settings = await this.create({});
+    }
+    return settings;
+};
+
+const AppSettings = mongoose.model('AppSettings', appSettingsSchema);
+
+export default AppSettings;

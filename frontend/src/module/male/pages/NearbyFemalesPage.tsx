@@ -4,18 +4,23 @@ import { BottomNavigation } from '../components/BottomNavigation';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import userService, { DiscoverProfile } from '../../../core/services/user.service';
 import chatService from '../../../core/services/chat.service';
+import { useGlobalState } from '../../../core/context/GlobalStateContext';
+import { InsufficientBalanceModal } from '../../../shared/components/InsufficientBalanceModal';
 
 type FilterType = 'all' | 'nearby' | 'new' | 'popular';
 
 export const NearbyFemalesPage = () => {
   const navigate = useNavigate();
   const { navigationItems, handleNavigationClick } = useMaleNavigation();
+  const { coinBalance } = useGlobalState();
 
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [profiles, setProfiles] = useState<DiscoverProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sendingHiTo, setSendingHiTo] = useState<string | null>(null);
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [requiredCoins, setRequiredCoins] = useState(5);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -57,6 +62,12 @@ export const NearbyFemalesPage = () => {
   }, [fetchProfiles]);
 
   const handleSendHi = async (profileId: string) => {
+    if (coinBalance < 5) {
+      setRequiredCoins(5);
+      setIsBalanceModalOpen(true);
+      return;
+    }
+
     try {
       setSendingHiTo(profileId);
       const result = await chatService.sendHiMessage(profileId);
@@ -64,7 +75,13 @@ export const NearbyFemalesPage = () => {
       navigate(`/male/chat/${result.chatId}`);
     } catch (err: any) {
       console.error('Failed to send Hi:', err);
-      alert(err.response?.data?.message || 'Failed to send Hi message');
+      const errorMessage = err.response?.data?.message || '';
+      if (errorMessage.toLowerCase().includes('insufficient') || errorMessage.toLowerCase().includes('balance')) {
+        setRequiredCoins(5);
+        setIsBalanceModalOpen(true);
+      } else {
+        alert(errorMessage || 'Failed to send Hi message');
+      }
     } finally {
       setSendingHiTo(null);
     }
@@ -193,6 +210,13 @@ export const NearbyFemalesPage = () => {
 
       {/* Bottom Navigation Bar */}
       <BottomNavigation items={navigationItems} onItemClick={handleNavigationClick} />
+
+      {/* Insufficient Balance Modal */}
+      <InsufficientBalanceModal
+        isOpen={isBalanceModalOpen}
+        onClose={() => setIsBalanceModalOpen(false)}
+        requiredCoins={requiredCoins}
+      />
     </div>
   );
 };

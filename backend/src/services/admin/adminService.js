@@ -6,6 +6,8 @@
 import User from '../../models/User.js';
 import Transaction from '../../models/Transaction.js';
 import Withdrawal from '../../models/Withdrawal.js';
+import AuditLog from '../../models/AuditLog.js';
+import AppSettings from '../../models/AppSettings.js';
 import { BadRequestError, NotFoundError } from '../../utils/errors.js';
 
 /**
@@ -39,8 +41,73 @@ export const getDashboardStats = async () => {
 
     stats.totalUsers.total = stats.totalUsers.male + stats.totalUsers.female;
 
-    // Active users
+    // Charts data
     const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // 1. User Growth Chart
+    const userGrowth = await User.aggregate([
+        { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+        {
+            $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } },
+        { $project: { date: "$_id", count: 1, _id: 0 } }
+    ]);
+
+    // 2. Revenue Trends Chart
+    const revenueTrends = await Transaction.aggregate([
+        {
+            $match: {
+                createdAt: { $gte: thirtyDaysAgo },
+                status: 'completed',
+                type: { $in: ['coin_purchase', 'withdrawal'] }
+            }
+        },
+        {
+            $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                deposits: {
+                    $sum: { $cond: [{ $eq: ['$type', 'coin_purchase'] }, '$amount', 0] }
+                },
+                payouts: {
+                    $sum: { $cond: [{ $eq: ['$type', 'withdrawal'] }, '$amount', 0] }
+                }
+            }
+        },
+        { $sort: { _id: 1 } },
+        { $project: { date: "$_id", deposits: 1, payouts: 1, _id: 0 } }
+    ]);
+
+    // 3. Activity Metrics
+    const activityMetrics = [
+        { type: 'Messages', count: await Transaction.countDocuments({ type: 'message_spent', status: 'completed' }) },
+        { type: 'Video Calls', count: await Transaction.countDocuments({ type: 'video_call_spent', status: 'completed' }) },
+        { type: 'Gifts', count: await Transaction.countDocuments({ type: 'gift_sent', status: 'completed' }) },
+        { type: 'Withdrawals', count: await Withdrawal.countDocuments({ status: 'completed' }) }
+    ];
+
+    // 4. Recent Activity
+    const recentActivityRaw = await AuditLog.find()
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean();
+
+    const recentActivity = recentActivityRaw.map(log => ({
+        id: log._id,
+        type: mapActionToType(log.action),
+        message: log.details?.message || `${log.adminName} performed ${log.action}`,
+        timestamp: log.createdAt,
+        userId: log.targetUserId,
+        userName: log.targetUserName
+    }));
+
+    // Fill in stats as before
+
+    // Active users
     const day24Ago = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const days7Ago = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const days30Ago = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -92,7 +159,27 @@ export const getDashboardStats = async () => {
     // Total transactions
     stats.totalTransactions = await Transaction.countDocuments();
 
-    return stats;
+    return {
+        stats,
+        charts: {
+            userGrowth,
+            revenueTrends,
+            activityMetrics
+        },
+        recentActivity
+    };
+};
+
+/**
+ * Map audit action to activity type
+ */
+const mapActionToType = (action) => {
+    if (action.includes('register')) return 'user_registered';
+    if (action.includes('approve')) return 'female_approved';
+    if (action.includes('withdrawal')) return 'withdrawal_approved';
+    if (action.includes('transaction')) return 'transaction';
+    if (action.includes('block')) return 'user_blocked';
+    return 'transaction';
 };
 
 /**
@@ -103,9 +190,12 @@ export const getPendingFemales = async (pagination, status = 'pending') => {
     const skip = (page - 1) * limit;
 
     const query = {
-        role: 'female',
-        approvalStatus: status
+        role: 'female'
     };
+
+    if (status && status !== 'all') {
+        query.approvalStatus = status;
+    }
 
     const users = await User.find(query)
         .select('phoneNumber profile verificationDocuments approvalStatus rejectionReason createdAt lastSeen isBlocked isVerified')
@@ -116,11 +206,26 @@ export const getPendingFemales = async (pagination, status = 'pending') => {
 
     const total = await User.countDocuments(query);
 
+    // Get counts for all statuses for the tabs
+    const statusCounts = await User.aggregate([
+        { $match: { role: 'female' } },
+        { $group: { _id: '$approvalStatus', count: { $sum: 1 } } }
+    ]);
+
+    const stats = {
+        all: statusCounts.reduce((sum, s) => sum + s.count, 0),
+        pending: statusCounts.find(s => s._id === 'pending')?.count || 0,
+        approved: statusCounts.find(s => s._id === 'approved')?.count || 0,
+        rejected: statusCounts.find(s => s._id === 'rejected')?.count || 0,
+        resubmit_requested: statusCounts.find(s => s._id === 'resubmit_requested')?.count || 0
+    };
+
     return {
         users,
         total,
         page,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit),
+        stats
     };
 };
 
@@ -186,4 +291,184 @@ export const requestResubmitFemale = async (userId, adminId, reason) => {
     await user.save();
 
     return user;
+};
+
+/**
+ * List all users for admin with filters
+ */
+export const listUsers = async (filters, pagination) => {
+    const { page = 1, limit = 20 } = pagination;
+    const { search, role, status } = filters;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (role && role !== 'all') query.role = role;
+    if (status === 'blocked') query.isBlocked = true;
+    if (status === 'active') query.isBlocked = false;
+    if (status === 'verified') query.isVerified = true;
+
+    if (search) {
+        query.$or = [
+            { phoneNumber: { $regex: search, $options: 'i' } },
+            { 'profile.name': { $regex: search, $options: 'i' } },
+            { fullName: { $regex: search, $options: 'i' } }
+        ];
+    }
+
+    const users = await User.find(query)
+        .select('-password -otp')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+    const total = await User.countDocuments(query);
+
+    return {
+        users: users.map(u => ({
+            id: u._id,
+            phoneNumber: u.phoneNumber,
+            name: u.profile?.name || u.fullName || 'Unknown',
+            role: u.role,
+            isBlocked: u.isBlocked,
+            isVerified: u.isVerified,
+            createdAt: u.createdAt,
+            lastLoginAt: u.lastSeen,
+            profile: u.profile
+        })),
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+    };
+};
+
+/**
+ * List all transactions for admin
+ */
+export const listTransactions = async (filters, pagination) => {
+    const { page = 1, limit = 20 } = pagination;
+    const { search, type, status } = filters;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (type && type !== 'all') query.type = type;
+    if (status && status !== 'all') query.status = status;
+
+    if (search) {
+        // We might need to find user IDs first if searching by name
+        const userQuery = {
+            $or: [
+                { phoneNumber: { $regex: search, $options: 'i' } },
+                { 'profile.name': { $regex: search, $options: 'i' } }
+            ]
+        };
+        const userIds = await User.find(userQuery).distinct('_id');
+        query.userId = { $in: userIds };
+    }
+
+    const transactions = await Transaction.find(query)
+        .populate('userId', 'profile.name phoneNumber')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+    const total = await Transaction.countDocuments(query);
+
+    return {
+        transactions: transactions.map(t => ({
+            id: t._id,
+            userId: t.userId?._id,
+            userName: t.userId?.profile?.name || 'Unknown',
+            type: t.type,
+            amountCoins: t.amountCoins,
+            amountINR: t.amount,
+            direction: t.direction,
+            timestamp: t.createdAt,
+            status: t.status,
+            relatedEntityId: t.relatedEntityId
+        })),
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+    };
+};
+
+/**
+ * Get audit logs
+ */
+export const getAuditLogs = async (filters, pagination) => {
+    const { page = 1, limit = 50 } = pagination;
+    const { search, action, adminId } = filters;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (action && action !== 'all') query.action = action;
+    if (adminId && adminId !== 'all') query.adminId = adminId;
+
+    if (search) {
+        query.$or = [
+            { adminName: { $regex: search, $options: 'i' } },
+            { targetUserName: { $regex: search, $options: 'i' } },
+            { action: { $regex: search, $options: 'i' } }
+        ];
+    }
+
+    const logs = await AuditLog.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+    const total = await AuditLog.countDocuments(query);
+
+    return {
+        logs: logs.map(l => ({
+            id: l._id,
+            adminId: l.adminId,
+            adminName: l.adminName,
+            action: l.action,
+            targetUserId: l.targetUserId,
+            targetUserName: l.targetUserName,
+            details: l.details,
+            timestamp: l.createdAt,
+            ipAddress: l.ipAddress
+        })),
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+    };
+};
+
+/**
+ * Get platform settings
+ */
+export const getAppSettings = async () => {
+    return await AppSettings.getSettings();
+};
+
+/**
+ * Update platform settings
+ */
+export const updateAppSettings = async (newSettings, adminId) => {
+    const settings = await AppSettings.getSettings();
+
+    // Update fields
+    if (newSettings.general) Object.assign(settings.general, newSettings.general);
+    if (newSettings.withdrawal) Object.assign(settings.withdrawal, newSettings.withdrawal);
+    if (newSettings.messageCosts) Object.assign(settings.messageCosts, newSettings.messageCosts);
+
+    await settings.save();
+
+    // Log the change
+    const admin = await User.findById(adminId);
+    await AuditLog.create({
+        adminId,
+        adminName: admin?.profile?.name || 'Admin',
+        action: 'settings_updated',
+        actionType: 'settings_update',
+        details: { message: 'Platform settings updated' }
+    });
+
+    return settings;
 };

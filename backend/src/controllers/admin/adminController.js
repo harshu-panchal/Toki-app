@@ -4,6 +4,7 @@
  */
 
 import * as adminService from '../../services/admin/adminService.js';
+import Gift from '../../models/Gift.js';
 
 import fs from 'fs';
 import path from 'path';
@@ -13,11 +14,11 @@ import path from 'path';
  */
 export const getDashboardStats = async (req, res, next) => {
     try {
-        const stats = await adminService.getDashboardStats();
+        const { stats, charts, recentActivity } = await adminService.getDashboardStats();
 
         res.status(200).json({
             status: 'success',
-            data: { stats }
+            data: { stats, charts, recentActivity }
         });
     } catch (error) {
         next(error);
@@ -105,6 +106,171 @@ export const requestResubmitFemale = async (req, res, next) => {
                 user,
                 message: 'Resubmission request sent to user'
             }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * List all users for admin
+ */
+export const listUsers = async (req, res, next) => {
+    try {
+        const filters = {
+            search: req.query.search,
+            role: req.query.role,
+            status: req.query.status
+        };
+        const pagination = {
+            page: parseInt(req.query.page) || 1,
+            limit: parseInt(req.query.limit) || 20
+        };
+
+        const result = await adminService.listUsers(filters, pagination);
+
+        res.status(200).json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * List all transactions for admin
+ */
+export const listTransactions = async (req, res, next) => {
+    try {
+        const filters = {
+            search: req.query.search,
+            type: req.query.type,
+            status: req.query.status
+        };
+        const pagination = {
+            page: parseInt(req.query.page) || 1,
+            limit: parseInt(req.query.limit) || 20
+        };
+
+        const result = await adminService.listTransactions(filters, pagination);
+
+        res.status(200).json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get audit logs
+ */
+export const getAuditLogs = async (req, res, next) => {
+    try {
+        const filters = {
+            search: req.query.search,
+            action: req.query.action,
+            adminId: req.query.adminId
+        };
+        const pagination = {
+            page: parseInt(req.query.page) || 1,
+            limit: parseInt(req.query.limit) || 50
+        };
+
+        const result = await adminService.getAuditLogs(filters, pagination);
+
+        res.status(200).json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get platform settings
+ */
+export const getAppSettings = async (req, res, next) => {
+    try {
+        const settings = await adminService.getAppSettings();
+
+        res.status(200).json({
+            status: 'success',
+            data: { settings }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Update platform settings
+ */
+export const updateAppSettings = async (req, res, next) => {
+    try {
+        const settings = await adminService.updateAppSettings(req.body, req.user._id);
+
+        res.status(200).json({
+            status: 'success',
+            data: { settings }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * List all gifts with costs
+ */
+export const listGifts = async (req, res, next) => {
+    try {
+        const gifts = await Gift.find()
+            .select('name category imageUrl cost isActive displayOrder')
+            .sort({ displayOrder: 1, name: 1 });
+
+        res.status(200).json({
+            status: 'success',
+            data: { gifts }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Update gift cost
+ */
+export const updateGiftCost = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { cost } = req.body;
+
+        if (typeof cost !== 'number' || cost < 0) {
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Valid cost is required (must be a positive number)'
+            });
+        }
+
+        const gift = await Gift.findByIdAndUpdate(
+            id,
+            { cost },
+            { new: true, runValidators: true }
+        );
+
+        if (!gift) {
+            return res.status(404).json({
+                status: 'fail',
+                message: 'Gift not found'
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { gift }
         });
     } catch (error) {
         next(error);

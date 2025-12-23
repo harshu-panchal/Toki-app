@@ -14,8 +14,9 @@ import { useAuth } from '../../../core/context/AuthContext';
 export const FemaleApprovalPage = () => {
   const navigate = useNavigate();
   const [approvals, setApprovals] = useState<FemaleApproval[]>([]);
+  const [stats, setStats] = useState({ all: 0, pending: 0, approved: 0, rejected: 0, resubmit_requested: 0 });
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'resubmit_requested'>('pending');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'resubmit_requested'>('all');
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [selectedApprovals, setSelectedApprovals] = useState<Set<string>>(new Set());
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useAdminNavigation();
@@ -29,8 +30,11 @@ export const FemaleApprovalPage = () => {
   const fetchApprovals = async () => {
     setIsLoading(true);
     try {
-      const result = await adminService.getPendingFemales(filter, 1, 20, token || undefined);
+      const result = await adminService.getPendingFemales(filter, 1, 50, token || undefined);
       setApprovals(result.users);
+      if (result.stats) {
+        setStats(result.stats);
+      }
     } catch (error) {
       console.error('Failed to fetch approvals:', error);
     } finally {
@@ -52,26 +56,6 @@ export const FemaleApprovalPage = () => {
       alert('User approved successfully');
     } catch (error) {
       alert('Approval failed');
-    }
-  };
-
-  const handleReject = async (userId: string, reason: string) => {
-    try {
-      await adminService.rejectFemale(userId, reason);
-      setApprovals((prev) => prev.filter(a => a.userId !== userId));
-      alert('User rejected');
-    } catch (error) {
-      alert('Rejection failed');
-    }
-  };
-
-  const handleResubmitRequest = async (userId: string, reason: string) => {
-    try {
-      await adminService.requestResubmit(userId, reason);
-      setApprovals((prev) => prev.filter(a => a.userId !== userId));
-      alert('Resubmission request sent');
-    } catch (error) {
-      alert('Request failed');
     }
   };
 
@@ -128,14 +112,27 @@ export const FemaleApprovalPage = () => {
             )}
           </div>
 
-          {/* Stats Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Stats Summary - Now using dynamic stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Females</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+                    {stats.all}
+                  </p>
+                </div>
+                <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <MaterialSymbol name="groups" className="text-gray-600 dark:text-gray-400" size={24} />
+                </div>
+              </div>
+            </div>
             <div className="bg-white dark:bg-[#1a1a1a] rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Pending Review</p>
                   <p className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-1">
-                    {approvals.filter((a) => a.approvalStatus === 'pending').length}
+                    {stats.pending}
                   </p>
                 </div>
                 <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
@@ -148,7 +145,7 @@ export const FemaleApprovalPage = () => {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Approved</p>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-                    {approvals.filter((a) => a.approvalStatus === 'approved').length}
+                    {stats.approved}
                   </p>
                 </div>
                 <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -161,7 +158,7 @@ export const FemaleApprovalPage = () => {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Rejected</p>
                   <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-                    {approvals.filter((a) => a.approvalStatus === 'rejected').length}
+                    {stats.rejected}
                   </p>
                 </div>
                 <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
@@ -171,43 +168,57 @@ export const FemaleApprovalPage = () => {
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="mb-6 flex flex-wrap gap-2">
+          {/* New Tabbed Interface */}
+          <div className="mb-6 bg-white dark:bg-[#1a1a1a] p-1 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-wrap gap-1 shadow-sm">
             <button
-              onClick={() => setFilter('pending')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'pending'
-                ? 'bg-orange-600 text-white'
-                : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              onClick={() => setFilter('all')}
+              className={`flex-1 min-w-[100px] px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${filter === 'all'
+                ? 'bg-gray-900 text-white shadow-md'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
             >
-              Pending ({approvals.filter((a) => a.approvalStatus === 'pending').length})
+              <MaterialSymbol name="list" size={18} />
+              All ({stats.all})
+            </button>
+            <button
+              onClick={() => setFilter('pending')}
+              className={`flex-1 min-w-[100px] px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${filter === 'pending'
+                ? 'bg-orange-600 text-white shadow-md'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+            >
+              <MaterialSymbol name="pending" size={18} />
+              Pending ({stats.pending})
             </button>
             <button
               onClick={() => setFilter('approved')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'approved'
-                ? 'bg-green-600 text-white'
-                : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              className={`flex-1 min-w-[100px] px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${filter === 'approved'
+                ? 'bg-green-600 text-white shadow-md'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
             >
-              Approved ({approvals.filter((a) => a.approvalStatus === 'approved').length})
+              <MaterialSymbol name="check_circle" size={18} />
+              Approved ({stats.approved})
             </button>
             <button
               onClick={() => setFilter('rejected')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'rejected'
-                ? 'bg-red-600 text-white'
-                : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              className={`flex-1 min-w-[100px] px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${filter === 'rejected'
+                ? 'bg-red-600 text-white shadow-md'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
             >
-              Rejected ({approvals.filter((a) => a.approvalStatus === 'rejected').length})
+              <MaterialSymbol name="cancel" size={18} />
+              Rejected ({stats.rejected})
             </button>
             <button
               onClick={() => setFilter('resubmit_requested')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${filter === 'resubmit_requested'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white dark:bg-[#1a1a1a] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              className={`flex-1 min-w-[100px] px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${filter === 'resubmit_requested'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
             >
-              Resubmit Needed ({approvals.filter((a) => a.approvalStatus === 'resubmit_requested').length})
+              <MaterialSymbol name="history" size={18} />
+              Resubmit Needed ({stats.resubmit_requested})
             </button>
           </div>
 

@@ -22,4 +22,21 @@ router.patch('/females/:id/approve', adminController.approveFemale);
 router.patch('/females/:id/reject', adminController.rejectFemale);
 router.patch('/females/:id/request-resubmit', adminController.requestResubmitFemale);
 
+// User Management
+router.get('/users', adminController.listUsers);
+
+// Transaction Management
+router.get('/transactions', adminController.listTransactions);
+
+// Audit Logs
+router.get('/audit-logs', adminController.getAuditLogs);
+
+// Platform Settings
+router.get('/settings', adminController.getAppSettings);
+router.patch('/settings', adminController.updateAppSettings);
+
+// Gift Management
+router.get('/gifts', adminController.listGifts);
+router.patch('/gifts/:id/cost', adminController.updateGiftCost);
+
 export default router;

@@ -3,7 +3,8 @@ import { AdminTopNavbar } from '../components/AdminTopNavbar';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { useAdminNavigation } from '../hooks/useAdminNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
-import type { AdminSettings } from '../types/admin.types';
+import adminService from '../../../core/services/admin.service';
+import type { AdminSettings, AdminGift } from '../types/admin.types';
 
 // Mock data - replace with actual API calls
 const mockSettings: AdminSettings = {
@@ -24,66 +25,124 @@ const mockSettings: AdminSettings = {
     weeklyLimit: 50000,
   },
   messageCosts: {
-    basic: 20,
-    silver: 18,
-    gold: 16,
-    platinum: 12,
+    basic: 50,
+    silver: 45,
+    gold: 40,
+    platinum: 35,
+    hiMessage: 5,
     videoCall: 500,
+  },
+  giftCosts: {
+    defaultCost: 100,
   },
 };
 
 export const SettingsPage = () => {
-  const [settings, setSettings] = useState<AdminSettings>(mockSettings);
-  const [activeTab, setActiveTab] = useState<'general' | 'withdrawal' | 'message-costs'>('general');
+  const [settings, setSettings] = useState<AdminSettings | null>(null);
+  const [gifts, setGifts] = useState<AdminGift[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingGifts, setIsLoadingGifts] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'withdrawal' | 'coin-costs' | 'gifts'>('general');
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useAdminNavigation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    fetchSettings();
+    fetchGifts();
   }, []);
 
+  const fetchSettings = async () => {
+    try {
+      setIsLoading(true);
+      const data = await adminService.getAppSettings();
+      setSettings(data);
+    } catch (error) {
+      console.error('Failed to fetch settings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchGifts = async () => {
+    try {
+      setIsLoadingGifts(true);
+      const data = await adminService.listGifts();
+      setGifts(data);
+    } catch (error) {
+      console.error('Failed to fetch gifts:', error);
+    } finally {
+      setIsLoadingGifts(false);
+    }
+  };
+
   const handleGeneralChange = (field: keyof AdminSettings['general'], value: string | boolean) => {
-    setSettings((prev) => ({
-      ...prev,
-      general: {
-        ...prev.general,
-        [field]: value,
-      },
-    }));
+    setSettings((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        general: {
+          ...prev.general,
+          [field]: value,
+        },
+      };
+    });
     setHasChanges(true);
   };
 
   const handleWithdrawalChange = (field: keyof AdminSettings['withdrawal'], value: number) => {
-    setSettings((prev) => ({
-      ...prev,
-      withdrawal: {
-        ...prev.withdrawal,
-        [field]: value,
-      },
-    }));
+    setSettings((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        withdrawal: {
+          ...prev.withdrawal,
+          [field]: value,
+        },
+      };
+    });
     setHasChanges(true);
   };
 
   const handleMessageCostChange = (field: keyof AdminSettings['messageCosts'], value: number) => {
-    setSettings((prev) => ({
-      ...prev,
-      messageCosts: {
-        ...prev.messageCosts,
-        [field]: value,
-      },
-    }));
+    setSettings((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        messageCosts: {
+          ...prev.messageCosts,
+          [field]: value,
+        },
+      };
+    });
     setHasChanges(true);
   };
 
   const handleSave = async () => {
+    if (!settings) return;
     setIsSaving(true);
-    // TODO: API call to save settings
-    console.log('Saving settings:', settings);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
-    setHasChanges(false);
-    setIsSaving(false);
-    // TODO: Show success notification
+    try {
+      await adminService.updateAppSettings(settings);
+      setHasChanges(false);
+      alert('Settings saved successfully!');
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      alert('Failed to save settings. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleGiftCostUpdate = async (giftId: string, newCost: number) => {
+    try {
+      await adminService.updateGiftCost(giftId, newCost);
+      setGifts(prev => prev.map(g => g._id === giftId ? { ...g, cost: newCost } : g));
+      alert('Gift cost updated successfully!');
+    } catch (error) {
+      console.error('Failed to update gift cost:', error);
+      alert('Failed to update gift cost. Please try again.');
+    }
   };
 
   const handleReset = () => {
@@ -96,8 +155,17 @@ export const SettingsPage = () => {
   const tabs = [
     { id: 'general', label: 'General', icon: 'settings' },
     { id: 'withdrawal', label: 'Withdrawal', icon: 'account_balance_wallet' },
-    { id: 'message-costs', label: 'Message Costs', icon: 'chat_bubble' },
+    { id: 'coin-costs', label: 'Coin Costs', icon: 'monetization_on' },
+    { id: 'gifts', label: 'Gifts', icon: 'card_giftcard' },
   ];
+
+  if (isLoading || !settings) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <MaterialSymbol name="hourglass_empty" size={48} className="animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex h-full min-h-screen w-full flex-col bg-gray-50 dark:bg-[#0a0a0a] overflow-x-hidden">
@@ -157,11 +225,10 @@ export const SettingsPage = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`flex-1 px-6 py-4 text-center font-medium transition-colors border-b-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
-                  }`}
+                  className={`flex-1 px-6 py-4 text-center font-medium transition-colors border-b-2 ${activeTab === tab.id
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <MaterialSymbol name={tab.icon} size={20} />
@@ -372,116 +439,203 @@ export const SettingsPage = () => {
               </div>
             )}
 
-            {/* Message Costs Settings */}
-            {activeTab === 'message-costs' && (
+            {/* Coin Costs Settings */}
+            {activeTab === 'coin-costs' && (
               <div className="p-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Message Costs</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Coin Costs</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                  Configure coin costs for messages and video calls by tier
+                  Configure coin costs for messages, special features, and video calls
                 </p>
                 <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Basic Tier */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Basic Tier (coins per message)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={settings.messageCosts.basic}
-                          onChange={(e) => handleMessageCostChange('basic', parseInt(e.target.value) || 0)}
-                          min="0"
-                          step="1"
-                          className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                          coins
-                        </span>
+                  {/* Regular Messages Section */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Regular Messages (Tier-Based)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {/* Basic Tier */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Basic Tier
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={settings.messageCosts.basic}
+                            onChange={(e) => handleMessageCostChange('basic', parseInt(e.target.value) || 0)}
+                            min="0"
+                            step="1"
+                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                            coins
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Silver Tier */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Silver Tier
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={settings.messageCosts.silver}
+                            onChange={(e) => handleMessageCostChange('silver', parseInt(e.target.value) || 0)}
+                            min="0"
+                            step="1"
+                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                            coins
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Gold Tier */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Gold Tier
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={settings.messageCosts.gold}
+                            onChange={(e) => handleMessageCostChange('gold', parseInt(e.target.value) || 0)}
+                            min="0"
+                            step="1"
+                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                            coins
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Platinum Tier */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Platinum Tier
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={settings.messageCosts.platinum}
+                            onChange={(e) => handleMessageCostChange('platinum', parseInt(e.target.value) || 0)}
+                            min="0"
+                            step="1"
+                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                            coins
+                          </span>
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Silver Tier */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Silver Tier (coins per message)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={settings.messageCosts.silver}
-                          onChange={(e) => handleMessageCostChange('silver', parseInt(e.target.value) || 0)}
-                          min="0"
-                          step="1"
-                          className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                          coins
-                        </span>
+                  {/* Special Messages Section */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Special Messages</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Hi Message */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          First "Hi" Message
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={settings.messageCosts.hiMessage}
+                            onChange={(e) => handleMessageCostChange('hiMessage', parseInt(e.target.value) || 0)}
+                            min="0"
+                            step="1"
+                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                            coins
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Cost for the initial "Hi" message to start a conversation</p>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Gold Tier */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Gold Tier (coins per message)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={settings.messageCosts.gold}
-                          onChange={(e) => handleMessageCostChange('gold', parseInt(e.target.value) || 0)}
-                          min="0"
-                          step="1"
-                          className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                          coins
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Platinum Tier */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Platinum Tier (coins per message)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={settings.messageCosts.platinum}
-                          onChange={(e) => handleMessageCostChange('platinum', parseInt(e.target.value) || 0)}
-                          min="0"
-                          step="1"
-                          className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                          coins
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Video Call */}
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Video Call Cost (coins per call)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={settings.messageCosts.videoCall}
-                          onChange={(e) => handleMessageCostChange('videoCall', parseInt(e.target.value) || 0)}
-                          min="0"
-                          step="1"
-                          className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                          coins
-                        </span>
+                  {/* Video Call Section */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Video Calls</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Video Call */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Video Call Cost (per call)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={settings.messageCosts.videoCall}
+                            onChange={(e) => handleMessageCostChange('videoCall', parseInt(e.target.value) || 0)}
+                            min="0"
+                            step="1"
+                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                            coins
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Gifts Tab */}
+            {activeTab === 'gifts' && (
+              <div className="p-6">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Gift Costs</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  Configure costs for individual gifts
+                </p>
+                {isLoadingGifts ? (
+                  <div className="flex items-center justify-center py-12">
+                    <MaterialSymbol name="hourglass_empty" size={48} className="animate-spin text-blue-600" />
+                  </div>
+                ) : gifts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <MaterialSymbol name="card_giftcard" size={64} className="text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">No gifts found</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {gifts.map((gift) => (
+                      <div key={gift._id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                        <div className="flex items-start gap-4">
+                          <img src={gift.imageUrl} alt={gift.name} className="w-16 h-16 rounded-lg object-cover" />
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 dark:text-white">{gift.name}</h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{gift.category}</p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={gift.cost}
+                                onChange={(e) => {
+                                  const newCost = parseInt(e.target.value) || 0;
+                                  if (newCost !== gift.cost) {
+                                    handleGiftCostUpdate(gift._id, newCost);
+                                  }
+                                }}
+                                min="0"
+                                step="1"
+                                className="w-24 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-500 dark:text-gray-400">coins</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -7,6 +7,8 @@ import { PhotoPickerModal } from '../components/PhotoPickerModal';
 import { ChatMoreOptionsModal } from '../components/ChatMoreOptionsModal';
 import { ChatGiftSelectorModal } from '../components/ChatGiftSelectorModal';
 import { LevelUpModal } from '../components/LevelUpModal';
+import { InsufficientBalanceModal } from '../../../shared/components/InsufficientBalanceModal';
+
 import { useGlobalState } from '../../../core/context/GlobalStateContext';
 import { useVideoCall } from '../../../core/context/VideoCallContext';
 import chatService from '../../../core/services/chat.service';
@@ -34,6 +36,9 @@ export const ChatWindowPage = () => {
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
   const [isGiftSelectorOpen, setIsGiftSelectorOpen] = useState(false);
   const [levelUpInfo, setLevelUpInfo] = useState<IntimacyInfo | null>(null);
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [requiredCoinsModal, setRequiredCoinsModal] = useState(MESSAGE_COST);
+
 
   // Typing indicator
   const [isOtherTyping, setIsOtherTyping] = useState(false);
@@ -165,9 +170,11 @@ export const ChatWindowPage = () => {
 
     // Check balance
     if (coinBalance < MESSAGE_COST) {
-      setError(`Insufficient coins. Need ${MESSAGE_COST} coins to send a message.`);
+      setRequiredCoinsModal(MESSAGE_COST);
+      setIsBalanceModalOpen(true);
       return;
     }
+
 
     try {
       setIsSending(true);
@@ -228,8 +235,16 @@ export const ChatWindowPage = () => {
       setIsGiftSelectorOpen(false);
     } catch (err: any) {
       console.error('Failed to send gift:', err);
-      setError(err.response?.data?.message || 'Failed to send gift');
+      const errorMessage = err.response?.data?.message || '';
+      if (errorMessage.toLowerCase().includes('insufficient') || errorMessage.toLowerCase().includes('balance')) {
+        // We might not know the exact cost here easily without re-calculating, 
+        // but it's okay to show the modal
+        setIsBalanceModalOpen(true);
+      } else {
+        setError(errorMessage || 'Failed to send gift');
+      }
     } finally {
+
       setIsSending(false);
     }
   };
@@ -288,9 +303,11 @@ export const ChatWindowPage = () => {
             return;
           }
           if (coinBalance < callPrice) {
-            setError(`Insufficient coins. Video call costs ${callPrice} coins.`);
+            setRequiredCoinsModal(callPrice);
+            setIsBalanceModalOpen(true);
             return;
           }
+
           if (!chatInfo.otherUser.isOnline) {
             setError('User is currently offline');
             return;
@@ -413,6 +430,14 @@ export const ChatWindowPage = () => {
         onSendGift={handleSendGift}
         coinBalance={coinBalance}
       />
+
+      {/* Insufficient Balance Modal */}
+      <InsufficientBalanceModal
+        isOpen={isBalanceModalOpen}
+        onClose={() => setIsBalanceModalOpen(false)}
+        requiredCoins={requiredCoinsModal}
+      />
+
 
       {/* Level Up Modal */}
       <LevelUpModal

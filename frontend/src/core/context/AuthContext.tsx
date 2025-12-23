@@ -8,6 +8,7 @@ import {
     setUser as setStorageUser,
     clearAuth,
     fetchUserProfile,
+    mapUserToProfile,
 } from '../utils/auth';
 
 interface AuthContextType {
@@ -39,30 +40,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setToken(storedToken);
                 // Optimistically set user from storage
                 if (storedUser) {
-                    setUserState(storedUser);
+                    // Map stored user if it's in raw format (has _id or profile)
+                    const profile = (storedUser._id || storedUser.profile)
+                        ? mapUserToProfile(storedUser)
+                        : storedUser;
+                    setUserState(profile);
                     setIsAuthenticated(true);
                 }
 
                 try {
-                    const user = await fetchUserProfile();
-                    console.log('Fetched profile from backend:', user);
-                    const profile: UserProfile = {
-                        id: user._id || user.id,
-                        phoneNumber: user.phoneNumber,
-                        role: user.role,
-                        name: user.profile?.name || 'User',
-                        avatarUrl: user.profile?.photos?.find((p: any) => p.isPrimary)?.url || user.profile?.photos?.[0]?.url || '',
-                        photos: user.profile?.photos?.map((p: any) => p.url) || [],
-                        age: user.profile?.age,
-                        bio: user.profile?.bio,
-                        city: user.profile?.location?.city,
-                        location: user.profile?.location ? `${user.profile.location.city || ''}, ${user.profile.location.country || ''}`.replace(/^, |, $/g, '') : undefined,
-                        interests: user.profile?.interests || [],
-                        occupation: user.profile?.occupation,
-                        isVerified: user.isVerified,
-                        approvalStatus: user.approvalStatus,
-                        rejectionReason: user.rejectionReason,
-                    };
+                    const rawUser = await fetchUserProfile();
+                    console.log('Fetched profile from backend:', rawUser);
+                    const profile = mapUserToProfile(rawUser);
                     setUserState(profile);
                     setStorageUser(profile);
                     setIsAuthenticated(true);
@@ -80,7 +69,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         initAuth();
     }, []);
 
-    const login = (newToken: string, newUser: UserProfile) => {
+    const login = (newToken: string, rawUser: any) => {
+        const newUser = mapUserToProfile(rawUser);
         setAuthToken(newToken);
         setStorageUser(newUser);
         setToken(newToken);

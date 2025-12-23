@@ -33,15 +33,13 @@ export const AdminDashboard = () => {
 
       const data = await response.json();
 
+      const dashboardDataFromApi = data.data;
+
       // Transform backend stats to match AdminDashboardData format
       const transformedData: AdminDashboardData = {
-        stats: data.data.stats,
-        charts: {
-          userGrowth: [],
-          revenueTrends: [],
-          activityMetrics: []
-        },
-        recentActivity: []
+        stats: dashboardDataFromApi.stats,
+        charts: dashboardDataFromApi.charts,
+        recentActivity: dashboardDataFromApi.recentActivity
       };
 
       setDashboardData(transformedData);

@@ -4,111 +4,46 @@ import { AdminSidebar } from '../components/AdminSidebar';
 import { TransactionTable } from '../components/TransactionTable';
 import { useAdminNavigation } from '../hooks/useAdminNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
+import adminService from '../../../core/services/admin.service';
 import type { AdminTransaction } from '../types/admin.types';
 
 // Mock data - replace with actual API calls
-const mockTransactions: AdminTransaction[] = [
-  {
-    id: 'tx-1',
-    userId: '1',
-    userName: 'Alex Johnson',
-    type: 'purchase',
-    amountCoins: 1000,
-    amountINR: 999,
-    direction: 'credit',
-    timestamp: new Date(Date.now() - 3600000),
-    status: 'completed',
-    relatedEntityId: 'payment-1',
-  },
-  {
-    id: 'tx-2',
-    userId: '2',
-    userName: 'Sarah Lee',
-    type: 'message_spent',
-    amountCoins: 50,
-    direction: 'debit',
-    timestamp: new Date(Date.now() - 7200000),
-    status: 'completed',
-    relatedEntityId: 'chat-1',
-  },
-  {
-    id: 'tx-3',
-    userId: '2',
-    userName: 'Sarah Lee',
-    type: 'message_earned',
-    amountCoins: 25,
-    direction: 'credit',
-    timestamp: new Date(Date.now() - 10800000),
-    status: 'completed',
-    relatedEntityId: 'chat-1',
-  },
-  {
-    id: 'tx-4',
-    userId: '3',
-    userName: 'Emily White',
-    type: 'withdrawal',
-    amountCoins: 2000,
-    amountINR: 1000,
-    direction: 'debit',
-    timestamp: new Date(Date.now() - 86400000),
-    status: 'pending',
-    relatedEntityId: 'withdrawal-1',
-  },
-  {
-    id: 'tx-5',
-    userId: '4',
-    userName: 'Jessica Martinez',
-    type: 'gift_sent',
-    amountCoins: 100,
-    direction: 'debit',
-    timestamp: new Date(Date.now() - 172800000),
-    status: 'completed',
-    relatedEntityId: 'gift-1',
-  },
-  {
-    id: 'tx-6',
-    userId: '5',
-    userName: 'David Brown',
-    type: 'purchase',
-    amountCoins: 500,
-    amountINR: 499,
-    direction: 'credit',
-    timestamp: new Date(Date.now() - 259200000),
-    status: 'completed',
-    relatedEntityId: 'payment-2',
-  },
-  {
-    id: 'tx-7',
-    userId: '6',
-    userName: 'Michael Chen',
-    type: 'adjustment',
-    amountCoins: 200,
-    direction: 'credit',
-    timestamp: new Date(Date.now() - 345600000),
-    status: 'completed',
-    relatedEntityId: 'adjustment-1',
-  },
-  {
-    id: 'tx-8',
-    userId: '1',
-    userName: 'Alex Johnson',
-    type: 'purchase',
-    amountCoins: 500,
-    amountINR: 499,
-    direction: 'credit',
-    timestamp: new Date(Date.now() - 432000000),
-    status: 'failed',
-    relatedEntityId: 'payment-3',
-  },
-];
+// const mockTransactions: AdminTransaction[] = [ ... ];
 
 export const TransactionsPage = () => {
-  const [transactions] = useState<AdminTransaction[]>(mockTransactions);
+  const [transactions, setTransactions] = useState<AdminTransaction[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({ search: '', type: 'all', status: 'all' });
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useAdminNavigation();
+
+  const updateFilters = (newFilters: Partial<typeof filters>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    setPage(1);
+  };
+
+  console.log('TransactionsPage filters:', filters, 'page:', page, 'updateFilters:', updateFilters);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    fetchTransactions();
+  }, [page, filters]);
+
+  const fetchTransactions = async () => {
+    try {
+      setIsLoading(true);
+      const data = await adminService.listTransactions(filters, page, 20);
+      setTransactions(data.transactions);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const stats = useMemo(() => {
     const totalTransactions = transactions.length;
@@ -169,7 +104,7 @@ export const TransactionsPage = () => {
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Transactions</h1>
-              <p className="text-gray-600 dark:text-gray-400">Monitor all platform transactions</p>
+              <p className="text-gray-600 dark:text-gray-400">Monitor all platform transactions ({total} total)</p>
             </div>
             <button
               onClick={() => {
@@ -271,7 +206,29 @@ export const TransactionsPage = () => {
           </div>
 
           {/* Transaction Table */}
-          <TransactionTable transactions={transactions} onViewDetails={handleViewDetails} />
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <TransactionTable transactions={transactions} onViewDetails={handleViewDetails} />
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex justify-center gap-2">
+              {/* Simplified pagination for now */}
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i + 1)}
+                  className={`px-3 py-1 rounded ${page === i + 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-800'}`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

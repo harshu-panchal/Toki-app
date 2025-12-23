@@ -10,7 +10,7 @@ const getAuthHeader = (token?: string) => ({
     }
 });
 
-export const getPendingFemales = async (status = 'pending', page = 1, limit = 20, token?: string): Promise<{ users: FemaleApproval[], total: number }> => {
+export const getPendingFemales = async (status = 'pending', page = 1, limit = 20, token?: string): Promise<{ users: FemaleApproval[], total: number, stats: any }> => {
     const response = await axios.get(`${API_URL}/admin/females/pending?status=${status}&page=${page}&limit=${limit}`, getAuthHeader(token));
 
     // Transform backend user format to FemaleApproval format
@@ -41,7 +41,7 @@ export const getPendingFemales = async (status = 'pending', page = 1, limit = 20
         submittedAt: u.createdAt
     }));
 
-    return { users, total: response.data.data.total };
+    return { users, total: response.data.data.total, stats: response.data.data.stats };
 };
 
 export const approveFemale = async (userId: string) => {

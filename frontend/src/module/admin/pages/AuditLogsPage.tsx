@@ -1,99 +1,23 @@
 // @ts-nocheck
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AdminTopNavbar } from '../components/AdminTopNavbar';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { useAdminNavigation } from '../hooks/useAdminNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
+import adminService from '../../../core/services/admin.service';
 import type { AuditLog } from '../types/admin.types';
 
 // Mock data - replace with actual API calls
-const mockAuditLogs: AuditLog[] = [
-  {
-    id: 'audit-1',
-    adminId: 'admin-1',
-    adminName: 'Admin User',
-    action: 'user_blocked',
-    targetUserId: '3',
-    targetUserName: 'Michael Chen',
-    details: 'User blocked for violating community guidelines',
-    timestamp: new Date(Date.now() - 3600000),
-    ipAddress: '192.168.1.100',
-  },
-  {
-    id: 'audit-2',
-    adminId: 'admin-1',
-    adminName: 'Admin User',
-    action: 'female_approved',
-    targetUserId: '2',
-    targetUserName: 'Sarah Lee',
-    details: 'Female profile approved after review',
-    timestamp: new Date(Date.now() - 7200000),
-    ipAddress: '192.168.1.100',
-  },
-  {
-    id: 'audit-3',
-    adminId: 'admin-1',
-    adminName: 'Admin User',
-    action: 'withdrawal_approved',
-    targetUserId: '3',
-    targetUserName: 'Emily White',
-    details: 'Withdrawal request approved: ₹1000',
-    timestamp: new Date(Date.now() - 10800000),
-    ipAddress: '192.168.1.100',
-  },
-  {
-    id: 'audit-4',
-    adminId: 'admin-1',
-    adminName: 'Admin User',
-    action: 'coin_plan_updated',
-    details: 'Coin plan "Gold Plan" updated: Price changed from ₹499 to ₹599',
-    timestamp: new Date(Date.now() - 86400000),
-    ipAddress: '192.168.1.100',
-  },
-  {
-    id: 'audit-5',
-    adminId: 'admin-1',
-    adminName: 'Admin User',
-    action: 'user_verified',
-    targetUserId: '1',
-    targetUserName: 'Alex Johnson',
-    details: 'User verification status updated',
-    timestamp: new Date(Date.now() - 172800000),
-    ipAddress: '192.168.1.100',
-  },
-  {
-    id: 'audit-6',
-    adminId: 'admin-1',
-    adminName: 'Admin User',
-    action: 'payout_slab_created',
-    details: 'New payout slab created: 1001-5000 coins at 60%',
-    timestamp: new Date(Date.now() - 259200000),
-    ipAddress: '192.168.1.100',
-  },
-  {
-    id: 'audit-7',
-    adminId: 'admin-1',
-    adminName: 'Admin User',
-    action: 'user_deleted',
-    targetUserId: '5',
-    targetUserName: 'David Brown',
-    details: 'User account permanently deleted',
-    timestamp: new Date(Date.now() - 345600000),
-    ipAddress: '192.168.1.100',
-  },
-  {
-    id: 'audit-8',
-    adminId: 'admin-1',
-    adminName: 'Admin User',
-    action: 'settings_updated',
-    details: 'Platform settings updated: Minimum withdrawal amount changed',
-    timestamp: new Date(Date.now() - 432000000),
-    ipAddress: '192.168.1.100',
-  },
-];
+// const mockAuditLogs: AuditLog[] = [ ... ];
+
+const logsPerPage = 50;
 
 export const AuditLogsPage = () => {
-  const [auditLogs] = useState<AuditLog[]>(mockAuditLogs);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState<'all' | string>('all');
   const [adminFilter, setAdminFilter] = useState<'all' | string>('all');
@@ -101,36 +25,31 @@ export const AuditLogsPage = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    fetchAuditLogs();
+  }, [page, searchQuery, actionFilter, adminFilter]);
 
-  const filteredLogs = useMemo(() => {
-    let filtered = auditLogs;
+  const fetchAuditLogs = async () => {
+    try {
+      setIsLoading(true);
+      const filters = { search: searchQuery, action: actionFilter, adminId: adminFilter };
+      const data = await adminService.getAuditLogs(filters, page, 50);
 
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (log) =>
-          log.adminName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          log.details.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (log.targetUserName && log.targetUserName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          log.ipAddress.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      // Ensure timestamps are Date objects
+      const processedLogs = data.logs.map((log: any) => ({
+        ...log,
+        timestamp: new Date(log.timestamp)
+      }));
+
+      setAuditLogs(processedLogs);
+      setTotal(data.total);
+    } catch (error) {
+      console.error('Failed to fetch audit logs:', error);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    // Action filter
-    if (actionFilter !== 'all') {
-      filtered = filtered.filter((log) => log.action === actionFilter);
-    }
-
-    // Admin filter
-    if (adminFilter !== 'all') {
-      filtered = filtered.filter((log) => log.adminId === adminFilter);
-    }
-
-    // Sort by timestamp (newest first)
-    return filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }, [auditLogs, searchQuery, actionFilter, adminFilter]);
+  const filteredLogs = auditLogs; // Filtering is handled by backend
 
   const uniqueActions = useMemo(() => {
     return Array.from(new Set(auditLogs.map((log) => log.action)));
@@ -185,6 +104,8 @@ export const AuditLogsPage = () => {
     return `${weeks} weeks ago`;
   };
 
+  const totalPages = Math.ceil(total / logsPerPage);
+
   return (
     <div className="relative flex h-full min-h-screen w-full flex-col bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-[#0a0a0a] dark:via-[#1a1a1a] dark:to-[#0a0a0a] overflow-x-hidden">
       {/* Top Navbar */}
@@ -226,7 +147,7 @@ export const AuditLogsPage = () => {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Total Logs</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                    {auditLogs.length.toLocaleString()}
+                    {total.toLocaleString()}
                   </p>
                 </div>
                 <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -306,8 +227,8 @@ export const AuditLogsPage = () => {
                 <button
                   onClick={() => setAdminFilter('all')}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${adminFilter === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
                 >
                   All Admins
@@ -317,8 +238,8 @@ export const AuditLogsPage = () => {
                     key={admin.id}
                     onClick={() => setAdminFilter(admin.id)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${adminFilter === admin.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                   >
                     {admin.name}

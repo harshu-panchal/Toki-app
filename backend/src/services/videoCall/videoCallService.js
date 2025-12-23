@@ -14,13 +14,19 @@ import VideoCall from '../../models/VideoCall.js';
 import User from '../../models/User.js';
 import Chat from '../../models/Chat.js';
 import Transaction from '../../models/Transaction.js';
+import AppSettings from '../../models/AppSettings.js';
 import logger from '../../utils/logger.js';
 import { BadRequestError, NotFoundError, ForbiddenError } from '../../utils/errors.js';
 
 // Environment config
-const VIDEO_CALL_PRICE = parseInt(process.env.VIDEO_CALL_PRICE, 10) || 500;
 const VIDEO_CALL_DURATION = parseInt(process.env.VIDEO_CALL_DURATION_SECONDS, 10) || 300;
 const CALL_TIMEOUT = parseInt(process.env.CALL_CONNECTION_TIMEOUT_SECONDS, 10) || 20;
+
+// Helper function to get video call cost from AppSettings
+const getVideoCallCost = async () => {
+    const settings = await AppSettings.getSettings();
+    return settings.messageCosts.videoCall;
+};
 
 /**
  * Validate if a user can initiate a video call
@@ -70,6 +76,7 @@ export const validateCallRequest = async (callerId, receiverId) => {
     }
 
     // 5. Check caller has enough coins
+    const VIDEO_CALL_PRICE = await getVideoCallCost();
     if (caller.coinBalance < VIDEO_CALL_PRICE) {
         throw new BadRequestError(`Insufficient coins. Video call costs ${VIDEO_CALL_PRICE} coins.`);
     }
@@ -92,6 +99,9 @@ export const initiateCall = async (callerId, receiverId) => {
     try {
         // Validate
         const { chat } = await validateCallRequest(callerId, receiverId);
+
+        // Get video call cost
+        const VIDEO_CALL_PRICE = await getVideoCallCost();
 
         // Check for existing active call (double-check)
         const existingCall = await VideoCall.getActiveCallForUser(callerId);
@@ -386,9 +396,9 @@ export const cleanupStaleCalls = async () => {
 
 // Export config for use in handlers
 export const VIDEO_CALL_CONFIG = {
-    PRICE: VIDEO_CALL_PRICE,
     DURATION: VIDEO_CALL_DURATION,
     TIMEOUT: CALL_TIMEOUT,
+    // PRICE is now dynamic, fetch via getVideoCallCost()
 };
 
 export default {

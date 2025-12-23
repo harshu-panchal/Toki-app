@@ -11,60 +11,9 @@ import { FemaleSidebar } from '../components/FemaleSidebar';
 import { QuickActionsGrid } from '../components/QuickActionsGrid';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import { LocationPromptModal } from '../../../shared/components/LocationPromptModal';
+import userService from '../../../core/services/user.service';
 import type { FemaleDashboardData } from '../types/female.types';
 
-// Mock data - replace with actual API calls
-const mockDashboardData: FemaleDashboardData = {
-  user: {
-    id: '1',
-    name: 'Emma',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC81hkr7IkYx1ryaWF6XEKAw50xyRvJBGMogrF-zD5ChG66QAopPNWZvczWXWXasmarotX6xfLiXqIGT-HGa4N4mpnfl6tHPN16fBm5L0ebBFFR6YnfhOhNpt_PXB-rNdw4iozv00ERuqlCKno-B1P2UZ6g-dU5YY4Or_m3Xdgk4_MrxVK9o6Uz70Vr_fXQdMhSrjjCl7s_yQE_R1O9FNwroQqdfSFv6kiO76qVxmnHDhLrYwRWtfdSdegsNjAzgAdgkUZgUomw2j8',
-    isPremium: true,
-    isOnline: true,
-  },
-  earnings: {
-    totalEarnings: 15250,
-    availableBalance: 12450,
-    pendingWithdrawals: 2800,
-  },
-  stats: {
-    messagesReceived: 342,
-    activeConversations: 18,
-    profileViews: 1256,
-  },
-  activeChats: [
-    {
-      id: '1',
-      userId: '1',
-      userName: 'Alex',
-      userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD50-ii2k9PzO4qeyW-OGHjX-2FkC-nA5ibp8nilOmxqIs-w6h7s0urlDqev0gVBZWdyFA_3jZ4auAmlsmmGZJtFVeTHiGW7cqwg60iSjQAedJk4JqEbDkQMBYmK31cVtDFsUHahf8u_-Do3G7K2GnansIQaBcgPSJLc7jSTEJr1GNKy9Kpkbb0A-qm4L0Ul1Bd5sSiBcUw8P2BA8K3VMWLs47qnJbJahDqGtp9UA5PPVTWdJ5atRHa8i9VBLDRrbIoeoOw1THR6BI',
-      lastMessage: 'Thanks for the great conversation! 😊',
-      timestamp: '10:30 AM',
-      isOnline: true,
-      hasUnread: true,
-    },
-    {
-      id: '2',
-      userId: '2',
-      userName: 'Michael',
-      userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD50-ii2k9PzO4qeyW-OGHjX-2FkC-nA5ibp8nilOmxqIs-w6h7s0urlDqev0gVBZWdyFA_3jZ4auAmlsmmGZJtFVeTHiGW7cqwg60iSjQAedJk4JqEbDkQMBYmK31cVtDFsUHahf8u_-Do3G7K2GnansIQaBcgPSJLc7jSTEJr1GNKy9Kpkbb0A-qm4L0Ul1Bd5sSiBcUw8P2BA8K3VMWLs47qnJbJahDqGtp9UA5PPVTWdJ5atRHa8i9VBLDRrbIoeoOw1THR6BI',
-      lastMessage: 'Looking forward to chatting more!',
-      timestamp: 'Yesterday',
-      isOnline: false,
-      hasUnread: false,
-    },
-    {
-      id: '3',
-      userId: '3',
-      userName: 'David',
-      userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD50-ii2k9PzO4qeyW-OGHjX-2FkC-nA5ibp8nilOmxqIs-w6h7s0urlDqev0gVBZWdyFA_3jZ4auAmlsmmGZJtFVeTHiGW7cqwg60iSjQAedJk4JqEbDkQMBYmK31cVtDFsUHahf8u_-Do3G7K2GnansIQaBcgPSJLc7jSTEJr1GNKy9Kpkbb0A-qm4L0Ul1Bd5sSiBcUw8P2BA8K3VMWLs47qnJbJahDqGtp9UA5PPVTWdJ5atRHa8i9VBLDRrbIoeoOw1THR6BI',
-      lastMessage: 'You have a beautiful profile!',
-      timestamp: 'Tue',
-      isOnline: false,
-      hasUnread: false,
-    },
-  ],
-};
 
 
 const quickActions = [
@@ -75,27 +24,31 @@ const quickActions = [
 ];
 
 export const FemaleDashboard = () => {
-  const [dashboardData] = useState<FemaleDashboardData>(mockDashboardData);
+  const [dashboardData, setDashboardData] = useState<FemaleDashboardData | null>(null);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { user, updateUser } = useAuth(); // Get user from auth context
+  const { user, updateUser } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
 
   useEffect(() => {
-    // window.scrollTo(0, 0); // Moved to other effect or keep separately
-  }, [user]);
+    window.scrollTo(0, 0);
+    fetchDashboardData();
+  }, []);
 
-  // Derived state for user profile to ensure real data is shown if authenticated
-  const displayedUser = user ? {
-    name: user.name || 'Anonymous',
-    avatar: user.avatarUrl || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
-    isPremium: false,
-    isOnline: true,
-  } : dashboardData.user;
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await userService.getFemaleDashboardData();
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Failed to fetch female dashboard:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-
     // Protect route: Redirect if not approved
     if (user && user.role === 'female' && user.approvalStatus !== 'approved') {
       navigate('/verification-pending');
@@ -155,6 +108,15 @@ export const FemaleDashboard = () => {
     setShowLocationPrompt(false);
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-background-light dark:bg-background-dark">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+        <p className="mt-4 text-gray-500 dark:text-gray-400">Loading dashboard...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-20">
       {/* Location Prompt Modal */}
@@ -179,14 +141,14 @@ export const FemaleDashboard = () => {
       <div className="flex p-4 pt-4 @container">
         <div className="flex w-full flex-col gap-4">
           <ProfileHeader
-            user={displayedUser}
+            user={dashboardData?.user || { name: 'Loading...', avatar: '', isPremium: false, isOnline: false }}
             onNotificationClick={handleNotificationClick}
           />
           {/* Earnings Card */}
           <EarningsCard
-            totalEarnings={dashboardData.earnings.totalEarnings}
-            availableBalance={dashboardData.earnings.availableBalance}
-            pendingWithdrawals={dashboardData.earnings.pendingWithdrawals}
+            totalEarnings={dashboardData?.earnings.totalEarnings || 0}
+            availableBalance={dashboardData?.earnings.availableBalance || 0}
+            pendingWithdrawals={dashboardData?.earnings.pendingWithdrawals || 0}
             onViewEarningsClick={handleViewEarningsClick}
             onWithdrawClick={handleWithdrawClick}
           />
@@ -194,7 +156,7 @@ export const FemaleDashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <FemaleStatsGrid stats={dashboardData.stats} />
+      <FemaleStatsGrid stats={dashboardData?.stats || { messagesReceived: 0, activeConversations: 0, profileViews: 0 }} />
 
       {/* Quick Actions Grid */}
       <QuickActionsGrid actions={quickActions.map(action => ({
@@ -204,7 +166,7 @@ export const FemaleDashboard = () => {
 
       {/* Active Chats List */}
       <ActiveChatsList
-        chats={dashboardData.activeChats}
+        chats={dashboardData?.activeChats || []}
         onChatClick={handleChatClick}
         onSeeAllClick={handleSeeAllChatsClick}
       />

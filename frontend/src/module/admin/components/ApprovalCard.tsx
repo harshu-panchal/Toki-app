@@ -38,7 +38,8 @@ export const ApprovalCard = ({
         </div>
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${approval.approvalStatus === 'pending' ? 'bg-orange-100 text-orange-800' :
           approval.approvalStatus === 'approved' ? 'bg-green-100 text-green-800' :
-            'bg-red-100 text-red-800'
+            approval.approvalStatus === 'resubmit_requested' ? 'bg-blue-100 text-blue-800' :
+              'bg-red-100 text-red-800'
           }`}>
           {approval.approvalStatus.charAt(0).toUpperCase() + approval.approvalStatus.slice(1).replace('_', ' ')}
         </span>

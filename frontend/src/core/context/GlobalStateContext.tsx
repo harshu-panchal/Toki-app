@@ -4,33 +4,19 @@
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { UserProfile } from '../types/global';
 import socketService from '../services/socket.service';
 import walletService from '../services/wallet.service';
-
-interface User {
-    _id: string;
-    phoneNumber: string;
-    role: 'male' | 'female' | 'admin';
-    profile?: {
-        name?: string;
-        age?: number;
-        photos?: Array<{ url: string; isPrimary?: boolean }>;
-        bio?: string;
-        occupation?: string;
-    };
-    coinBalance: number;
-    approvalStatus?: string;
-    isOnline?: boolean;
-}
+import { useAuth } from './AuthContext';
+import { mapUserToProfile } from '../utils/auth';
 
 interface GlobalState {
-    user: User | null;
+    user: UserProfile | null;
     coinBalance: number;
-    isLoading: boolean;
     isConnected: boolean;
 
     // Actions
-    setUser: (user: User | null) => void;
+    setUser: (user: any | null) => void;
     updateBalance: (balance: number) => void;
     refreshBalance: () => Promise<void>;
     logout: () => void;
@@ -50,15 +36,7 @@ interface GlobalStateProviderProps {
 }
 
 export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
-    const [user, setUserState] = useState<User | null>(() => {
-        // Initialize from localStorage
-        try {
-            const stored = localStorage.getItem(STORAGE_KEYS.USER);
-            return stored ? JSON.parse(stored) : null;
-        } catch {
-            return null;
-        }
-    });
+    const { user, updateUser } = useAuth();
 
     const [coinBalance, setCoinBalance] = useState<number>(() => {
         // Initialize from cache
@@ -70,22 +48,15 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
         }
     });
 
-    const [isLoading, setIsLoading] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
 
     // Update user and persist to localStorage
-    const setUser = useCallback((newUser: User | null) => {
-        setUserState(newUser);
+    // setUser mapping
+    const setUser = useCallback((newUser: any | null) => {
         if (newUser) {
-            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(newUser));
-            setCoinBalance(newUser.coinBalance || 0);
-            localStorage.setItem(STORAGE_KEYS.BALANCE_CACHE, String(newUser.coinBalance || 0));
-        } else {
-            localStorage.removeItem(STORAGE_KEYS.USER);
-            localStorage.removeItem(STORAGE_KEYS.BALANCE_CACHE);
-            setCoinBalance(0);
+            updateUser(mapUserToProfile(newUser));
         }
-    }, []);
+    }, [updateUser]);
 
     // Update balance and cache
     const updateBalance = useCallback((balance: number) => {
@@ -105,13 +76,13 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
     }, [updateBalance]);
 
     // Logout
-    const logout = useCallback(() => {
+    const logoutAction = useCallback(() => {
         socketService.disconnect();
         localStorage.removeItem(STORAGE_KEYS.USER);
         localStorage.removeItem(STORAGE_KEYS.TOKEN);
         localStorage.removeItem(STORAGE_KEYS.BALANCE_CACHE);
-        setUserState(null);
         setCoinBalance(0);
+        // AuthContext.logout will be handled by the logout button in components
     }, []);
 
     // Socket.IO event listeners
@@ -131,9 +102,10 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
         };
 
         // Handle user updates (profile changes, online status, etc.)
+        // Handle user updates (profile changes, online status, etc.)
         const handleUserUpdate = (data: any) => {
-            if (data.userId === user._id) {
-                setUserState(prev => prev ? { ...prev, ...data } : null);
+            if (data.userId === user?.id) {
+                updateUser(mapUserToProfile(data));
             }
         };
 
@@ -152,17 +124,16 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
             socketService.off('balance:update', handleBalanceUpdate);
             socketService.off('user:update', handleUserUpdate);
         };
-    }, [user?._id, updateBalance, refreshBalance]);
+    }, [user?.id, updateBalance, refreshBalance, updateUser]);
 
     const value: GlobalState = {
         user,
         coinBalance,
-        isLoading,
         isConnected,
         setUser,
         updateBalance,
         refreshBalance,
-        logout,
+        logout: logoutAction,
     };
 
     return (

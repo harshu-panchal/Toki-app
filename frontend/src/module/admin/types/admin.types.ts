@@ -146,7 +146,32 @@ export interface AdminSettings {
     dailyLimit: number;
     weeklyLimit: number;
   };
-  messageCosts: MessageCosts;
+  messageCosts: {
+    // Tier-based message costs
+    basic: number;
+    silver: number;
+    gold: number;
+    platinum: number;
+    // Special message types
+    hiMessage: number;
+    // Video call cost
+    videoCall: number;
+  };
+  giftCosts: {
+    defaultCost: number;
+  };
+}
+
+// Gift Management
+export interface AdminGift {
+  _id: string;
+  name: string;
+  category: 'romantic' | 'funny' | 'celebration' | 'appreciation' | 'special';
+  imageUrl: string;
+  cost: number;
+  description?: string;
+  isActive: boolean;
+  displayOrder: number;
 }
 
 // Audit Log

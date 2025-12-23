@@ -9,15 +9,29 @@ import Chat from '../../models/Chat.js';
 import User from '../../models/User.js';
 import Gift from '../../models/Gift.js';
 import Transaction from '../../models/Transaction.js';
+import AppSettings from '../../models/AppSettings.js';
 import { NotFoundError, BadRequestError } from '../../utils/errors.js';
 import transactionManager from '../../core/transactions/transactionManager.js';
 import dataValidation from '../../core/validation/dataValidation.js';
 import logger from '../../utils/logger.js';
 import { checkLevelUp, getLevelInfo } from '../../utils/intimacyLevel.js';
 
-// Message costs (can be moved to config)
-const MESSAGE_COST = 50; // coins per message
-const HI_MESSAGE_COST = 5; // coins for "Send Hi"
+// Helper functions to get costs from AppSettings
+const getMessageCost = async (userTier) => {
+    const settings = await AppSettings.getSettings();
+    const tierCosts = {
+        basic: settings.messageCosts.basic,
+        silver: settings.messageCosts.silver,
+        gold: settings.messageCosts.gold,
+        platinum: settings.messageCosts.platinum,
+    };
+    return tierCosts[userTier] || settings.messageCosts.basic;
+};
+
+const getHiMessageCost = async () => {
+    const settings = await AppSettings.getSettings();
+    return settings.messageCosts.hiMessage;
+};
 
 
 /**
@@ -51,6 +65,10 @@ export const sendMessage = async (req, res, next) => {
         // If sender is male, deduct coins
         let transaction = null;
         if (req.user.role === 'male') {
+            // Get message cost based on user's tier
+            const sender = await User.findById(senderId);
+            const MESSAGE_COST = await getMessageCost(sender.memberTier);
+
             // Validate user has enough coins
             await dataValidation.validateMessageSend(senderId, MESSAGE_COST);
 
@@ -215,6 +233,7 @@ export const sendHiMessage = async (req, res, next) => {
         }
 
         // Validate and deduct coins
+        const HI_MESSAGE_COST = await getHiMessageCost();
         await dataValidation.validateMessageSend(senderId, HI_MESSAGE_COST);
 
         // Execute atomic transaction
@@ -344,7 +363,7 @@ export const sendHiMessage = async (req, res, next) => {
 export const sendGift = async (req, res, next) => {
     try {
         const senderId = req.user.id;
-        const { chatId, giftIds } = req.body; // Modified to accept array of giftIds
+        const { chatId, giftIds, content } = req.body; // Added content for custom note
 
         if (!giftIds || !Array.isArray(giftIds) || giftIds.length === 0) {
             throw new BadRequestError('At least one Gift ID is required');
@@ -437,7 +456,7 @@ export const sendGift = async (req, res, next) => {
             chatId,
             senderId,
             receiverId,
-            content: `Sent ${gifts.length} gift${gifts.length > 1 ? 's' : ''}`,
+            content: content || `Sent ${gifts.length} gift${gifts.length > 1 ? 's' : ''}`,
             messageType: 'gift',
             gifts: messageGifts,
             status: 'sent',
@@ -500,6 +519,46 @@ export const sendGift = async (req, res, next) => {
                 levelUp: levelUpInfo,
                 intimacy: getLevelInfo(chat.totalMessageCount),
             }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get gift history for the current user
+ */
+export const getGiftHistory = async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+
+        // Fetch gift_sent transactions for the user
+        const transactions = await Transaction.find({
+            userId,
+            type: 'gift_sent',
+            status: 'completed'
+        })
+            .sort({ createdAt: -1 })
+            .populate('relatedUserId', 'profile')
+            .lean();
+
+        // Map to a cleaner format for the frontend
+        const history = transactions.map(tx => ({
+            id: tx._id,
+            giftName: tx.description.replace('Sent gifts: ', '').replace('Sent 1 gift: ', ''),
+            recipientId: tx.relatedUserId?._id,
+            recipientName: tx.relatedUserId?.profile?.name || 'User',
+            recipientAvatar: tx.relatedUserId?.profile?.photos?.find(p => p.isPrimary)?.url || tx.relatedUserId?.profile?.photos?.[0]?.url || '',
+            sentAt: tx.createdAt,
+            cost: tx.amountCoins,
+            // We might need to fetch the actual message if we want the custom note
+        }));
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                history,
+            },
         });
     } catch (error) {
         next(error);

@@ -7,10 +7,10 @@ interface ProfileHeaderProps {
     isPremium: boolean;
     isOnline: boolean;
   };
-  onArrowClick?: () => void;
+  onEditClick?: () => void;
 }
 
-export const ProfileHeader = ({ user, onArrowClick }: ProfileHeaderProps) => {
+export const ProfileHeader = ({ user, onEditClick }: ProfileHeaderProps) => {
   return (
     <div className="flex items-center justify-between p-4 pt-8">
       <div className="flex items-center gap-4">
@@ -34,11 +34,11 @@ export const ProfileHeader = ({ user, onArrowClick }: ProfileHeaderProps) => {
         </div>
       </div>
       <button
-        onClick={onArrowClick}
+        onClick={onEditClick}
         className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 dark:from-pink-900/30 dark:to-rose-900/30 text-pink-700 dark:text-pink-300 shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all border border-pink-200/50 dark:border-pink-800/50"
-        aria-label="Go to Profile Section"
+        aria-label="Edit Profile"
       >
-        <MaterialSymbol name="arrow_forward" size={20} />
+        <MaterialSymbol name="edit" size={20} />
       </button>
     </div>
   );

@@ -6,6 +6,7 @@ import { PayoutSlabEditor } from '../components/PayoutSlabEditor';
 import { useAdminNavigation } from '../hooks/useAdminNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import walletService from '../../../core/services/wallet.service';
+import adminService from '../../../core/services/admin.service';
 import type { CoinPlan, PayoutSlab, MessageCosts } from '../types/admin.types';
 import type { CoinPlan as WalletCoinPlan, PayoutSlab as WalletPayoutSlab } from '../../../core/types/wallet.types';
 
@@ -70,13 +71,16 @@ export const CoinEconomyPage = () => {
       setIsLoading(true);
       setError(null);
 
-      const [plans, slabs] = await Promise.all([
+      const [plans, slabs, settings] = await Promise.all([
         walletService.getAllCoinPlans(),
         walletService.getPayoutSlabs(),
+        adminService.getAppSettings(),
       ]);
 
       setCoinPlans(plans.map(mapWalletPlanToAdminPlan));
       setPayoutSlabs(slabs.map(mapWalletSlabToAdminSlab));
+      setMessageCosts(settings.messageCosts);
+      setWithdrawalSettings(settings.withdrawal);
     } catch (err: any) {
       console.error('Failed to fetch data:', err);
       setError('Failed to load data. Please try again.');
@@ -195,16 +199,34 @@ export const CoinEconomyPage = () => {
     }
   };
 
-  const handleSaveMessageCosts = () => {
-    setHasChanges(false);
-    // TODO: Implement when app settings API is available
-    showSuccess('Message costs saved (local only - API pending)');
+  const handleSaveMessageCosts = async () => {
+    try {
+      setIsSaving(true);
+      setError(null);
+      await adminService.updateAppSettings({ messageCosts });
+      setHasChanges(false);
+      showSuccess('Message costs saved successfully');
+    } catch (err: any) {
+      console.error('Failed to save message costs:', err);
+      setError('Failed to save message costs');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleSaveWithdrawalSettings = () => {
-    setHasChanges(false);
-    // TODO: Implement when app settings API is available
-    showSuccess('Withdrawal settings saved (local only - API pending)');
+  const handleSaveWithdrawalSettings = async () => {
+    try {
+      setIsSaving(true);
+      setError(null);
+      await adminService.updateAppSettings({ withdrawal: withdrawalSettings });
+      setHasChanges(false);
+      showSuccess('Withdrawal settings saved successfully');
+    } catch (err: any) {
+      console.error('Failed to save withdrawal settings:', err);
+      setError('Failed to save withdrawal settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveAll = () => {

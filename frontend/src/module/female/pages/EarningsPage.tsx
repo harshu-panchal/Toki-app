@@ -15,6 +15,7 @@ export const EarningsPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [summary, setSummary] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,12 +29,15 @@ export const EarningsPage = () => {
       setIsLoading(true);
       setError(null);
 
-      const [balanceData, txData] = await Promise.all([
-        walletService.getMyBalance().catch(() => ({ balance: 0 })),
+      const [summaryData, txData] = await Promise.all([
+        walletService.getEarningsSummary().catch(() => null),
         walletService.getMyTransactions({ direction: 'credit', limit: 50 }).catch(() => ({ transactions: [] })),
       ]);
 
-      setBalance(balanceData.balance || 0);
+      if (summaryData) {
+        setSummary(summaryData);
+        setBalance(summaryData.availableBalance || 0);
+      }
       setTransactions(txData.transactions || []);
     } catch (err: any) {
       console.error('Failed to fetch earnings data:', err);
@@ -43,18 +47,17 @@ export const EarningsPage = () => {
     }
   };
 
-  // Calculate total earnings from transactions
-  const totalEarnings = transactions
-    .filter((t) => t.direction === 'credit' && t.type !== 'purchase')
-    .reduce((sum, t) => sum + t.amountCoins, 0);
+  // Get total earnings based on selected period
+  const displayTotalEarnings = summary
+    ? selectedPeriod === 'daily'
+      ? summary.periodStats.daily
+      : selectedPeriod === 'weekly'
+        ? summary.periodStats.weekly
+        : summary.periodStats.monthly
+    : 0;
 
   // Get earnings breakdown by type
-  const earningsByType = transactions
-    .filter((t) => t.direction === 'credit' && t.type !== 'purchase')
-    .reduce((acc, t) => {
-      acc[t.type] = (acc[t.type] || 0) + t.amountCoins;
-      return acc;
-    }, {} as Record<string, number>);
+  const earningsByType = summary?.earningsByType || {};
 
   // Get icon for transaction type
   const getTypeIcon = (type: string) => {
@@ -137,11 +140,11 @@ export const EarningsPage = () => {
           <div className="px-6 py-4 space-y-4">
             <div className="bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/10 dark:to-primary/5 rounded-xl p-6 border border-primary/10">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-medium text-slate-600 dark:text-[#cbbc90]">Total Earnings</span>
+                <span className="text-sm font-medium text-slate-600 dark:text-[#cbbc90]">Total Earnings ({selectedPeriod})</span>
                 <MaterialSymbol name="trending_up" className="text-primary" />
               </div>
               <p className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                {totalEarnings.toLocaleString()} coins
+                {displayTotalEarnings.toLocaleString()} coins
               </p>
               <p className="text-sm text-slate-500 dark:text-[#cbbc90]">
                 Available: {balance.toLocaleString()} coins
@@ -150,10 +153,10 @@ export const EarningsPage = () => {
 
             {/* Earnings by Type */}
             <div className="grid grid-cols-3 gap-3">
-              {Object.entries(earningsByType).slice(0, 3).map(([type, amount]) => (
+              {Object.entries(earningsByType).map(([type, amount]) => (
                 <div key={type} className="bg-white dark:bg-[#342d18] rounded-xl p-4 text-center shadow-sm">
                   <MaterialSymbol name={getTypeIcon(type)} className="text-primary mb-1" size={24} />
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">{amount}</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">{amount as number}</p>
                   <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{formatType(type)}</p>
                 </div>
               ))}

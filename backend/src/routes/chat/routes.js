@@ -53,4 +53,7 @@ router.post('/messages/gift', restrictTo('male'), messageController.sendGift);
 // Get available gifts
 router.get('/gifts', messageController.getGifts);
 
+// Get gift history
+router.get('/history/gifts', restrictTo('male'), messageController.getGiftHistory);
+
 export default router;

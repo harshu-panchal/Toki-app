@@ -91,7 +91,22 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
     const saveToChatCache = useCallback((chatId: string, messages: any[]) => {
         setChatCache(prev => {
             const updated = { ...prev, [chatId]: messages.slice(-50) }; // Keep last 50 messages
-            localStorage.setItem(STORAGE_KEYS.CHAT_CACHE, JSON.stringify(updated));
+
+            // Auto-Pruning: If we have more than 20 chats cached, remove the oldest one
+            const chatIds = Object.keys(updated);
+            if (chatIds.length > 20) {
+                delete updated[chatIds[0]];
+            }
+
+            try {
+                localStorage.setItem(STORAGE_KEYS.CHAT_CACHE, JSON.stringify(updated));
+            } catch (e: any) {
+                if (e.name === 'QuotaExceededError' || e.code === 22) {
+                    console.warn('Storage quota exceeded, clearing chat cache to free up space');
+                    // If still failing, clear the whole cache to prevent crash
+                    localStorage.removeItem(STORAGE_KEYS.CHAT_CACHE);
+                }
+            }
             return updated;
         });
     }, []);

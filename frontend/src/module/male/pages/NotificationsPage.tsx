@@ -7,73 +7,76 @@ import { MaleSidebar } from '../components/MaleSidebar';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import type { Notification } from '../types/male.types';
-
-// Mock data - replace with actual API calls
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'match',
-    title: 'New Match!',
-    message: 'Sarah liked you back',
-    timestamp: '2 minutes ago',
-    isRead: false,
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBNnKyZLNWCV7B-XwKgjd9-bbG9ZSq583oYGij7uKTYk2Ah_9nkpqgsGSDu-FUgux5QDiLCTw_y9JxTBhkZjWAOOReMhlK98A_84vIsKaxQ0IUzZqkJ7-wnAv67HRuUVltC2QQzOfbTk1-OdjqC7SWT4iG-MXs81ePZK3x1mYOHabRqp4eH7yIfiX3tH-YMXSs1uWS41vrxzPC8_MJHasLGiUWINfHYQ7KF2jfo0n_Yo6qBJKr_qMrOBUdimUVVJdY46GD7L0v-oL4',
-    relatedUserId: '1',
-    actionUrl: '/male/profile/1',
-  },
-  {
-    id: '2',
-    type: 'message',
-    title: 'New Message',
-    message: 'Emily sent you a message',
-    timestamp: '15 minutes ago',
-    isRead: false,
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCLUSJJYAwx8tl_zGDnOiTXyUUZNGZvfSUhgCgsc5vA2u3832geBVry-vrxCLbywcPMNdDw9Pp8aQYpK6Of5m_eCNYG0p8DZ_zKmzCBISKf3HqDRE9LKIkflketnQjBg0ihzj9xMoUbFN0MewVDhhm62RT4P8ApfLpMqm1KF4cJSY8J3ofy8uvQLeu7ka7eCxUsjWF4-UjrzrD1786TFutJ9_LA2fBbGdcQt8H5YNPFmG4lNC_tEwPefXDp1ieMAWqV4GmL4cQser8',
-    relatedChatId: '2',
-    actionUrl: '/male/chat/2',
-  },
-  {
-    id: '3',
-    type: 'payment',
-    title: 'Payment Successful',
-    message: 'Your purchase of 600 coins was successful',
-    timestamp: '1 hour ago',
-    isRead: true,
-  },
-  {
-    id: '4',
-    type: 'system',
-    title: 'Welcome Bonus',
-    message: 'You received 50 bonus coins for your first purchase!',
-    timestamp: '2 hours ago',
-    isRead: true,
-  },
-  {
-    id: '5',
-    type: 'gift',
-    title: 'Gift Received',
-    message: 'Jessica sent you a gift',
-    timestamp: 'Yesterday',
-    isRead: true,
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc0OstJEnLP2BH3T9hAadSkfqrmXq73qN9gbTMt7kfgPaQTpDMo6RBY0rGIlVRRYx9RNgGIuso4uSojA6-sMJxsbwokldCWi5vSTRo5Am8Pzgc73OW3MErmDu8gHuiQ0qQbM52r1B6IJMdIgiER50uXcyACMQ1f-e3CVduYEyDGFk_BIAtnlQer3BE077LFURJq4oRmImX1yG5_Q1OTgCEjnwV6A_EFuMSTBc85zvXe5_v2YpQ3mDh5t5vEzbNV0GqM0iE3aISpuE',
-    relatedUserId: '3',
-  },
-];
-
-const filterOptions = [
-  { id: 'all', label: 'All' },
-  { id: 'unread', label: 'Unread' },
-  { id: 'matches', label: 'Matches' },
-  { id: 'messages', label: 'Messages' },
-];
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 export const NotificationsPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Mock data - in a real app these titles/messages would come from the backend or be localized here
+  const mockNotifications: Notification[] = [
+    {
+      id: '1',
+      type: 'match',
+      title: t('newMatchTitle'),
+      message: t('matchNotificationDesc', { name: 'Sarah' }),
+      timestamp: '2 minutes ago',
+      isRead: false,
+      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBNnKyZLNWCV7B-XwKgjd9-bbG9ZSq583oYGij7uKTYk2Ah_9nkpqgsGSDu-FUgux5QDiLCTw_y9JxTBhkZjWAOOReMhlK98A_84vIsKaxQ0IUzZqkJ7-wnAv67HRuUVltC2QQzOfbTk1-OdjqC7SWT4iG-MXs81ePZK3x1mYOHabRqp4eH7yIfiX3tH-YMXSs1uWS41vrxzPC8_MJHasLGiUWINfHYQ7KF2jfo0n_Yo6qBJKr_qMrOBUdimUVVJdY46GD7L0v-oL4',
+      relatedUserId: '1',
+      actionUrl: '/male/profile/1',
+    },
+    {
+      id: '2',
+      type: 'message',
+      title: t('newMessageTitle'),
+      message: t('messageNotificationDesc', { name: 'Emily' }),
+      timestamp: '15 minutes ago',
+      isRead: false,
+      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCLUSJJYAwx8tl_zGDnOiTXyUUZNGZvfSUhgCgsc5vA2u3832geBVry-vrxCLbywcPMNdDw9Pp8aQYpK6Of5m_eCNYG0p8DZ_zKmzCBISKf3HqDRE9LKIkflketnQjBg0ihzj9xMoUbFN0MewVDhhm62RT4P8ApfLpMqm1KF4cJSY8J3ofy8uvQLeu7ka7eCxUsjWF4-UjrzrD1786TFutJ9_LA2fBbGdcQt8H5YNPFmG4lNC_tEwPefXDp1ieMAWqV4GmL4cQser8',
+      relatedChatId: '2',
+      actionUrl: '/male/chat/2',
+    },
+    {
+      id: '3',
+      type: 'payment',
+      title: t('paymentSuccessfulTitle'),
+      message: t('paymentNotificationDesc', { count: 600 }),
+      timestamp: '1 hour ago',
+      isRead: true,
+    },
+    {
+      id: '4',
+      type: 'system',
+      title: t('welcomeBonusTitle'),
+      message: t('bonusNotificationDesc', { count: 50 }),
+      timestamp: '2 hours ago',
+      isRead: true,
+    },
+    {
+      id: '5',
+      type: 'gift',
+      title: t('giftReceivedTitle'),
+      message: t('giftNotificationDesc', { name: 'Jessica' }),
+      timestamp: 'Yesterday',
+      isRead: true,
+      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBc0OstJEnLP2BH3T9hAadSkfqrmXq73qN9gbTMt7kfgPaQTpDMo6RBY0rGIlVRRYx9RNgGIuso4uSojA6-sMJxsbwokldCWi5vSTRo5Am8Pzgc73OW3MErmDu8gHuiQ0qQbM52r1B6IJMdIgiER50uXcyACMQ1f-e3CVduYEyDGFk_BIAtnlQer3BE077LFURJq4oRmImX1yG5_Q1OTgCEjnwV6A_EFuMSTBc85zvXe5_v2YpQ3mDh5t5vEzbNV0GqM0iE3aISpuE',
+      relatedUserId: '3',
+    },
+  ];
+
+  const filterOptions = [
+    { id: 'all', label: t('filterAll') },
+    { id: 'unread', label: t('unread') },
+    { id: 'matches', label: t('filterMatches') },
+    { id: 'messages', label: t('filterMessages') },
+  ];
+
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const [selectedFilter, setSelectedFilter] = useState('all');
 
@@ -98,12 +101,10 @@ export const NotificationsPage = () => {
   }, [notifications, selectedFilter]);
 
   const handleNotificationClick = (notification: Notification) => {
-    // Mark as read
     setNotifications((prev) =>
       prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
     );
 
-    // Navigate to action URL if available
     if (notification.actionUrl) {
       navigate(notification.actionUrl);
     }
@@ -139,10 +140,8 @@ export const NotificationsPage = () => {
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-white pb-24 min-h-screen">
-      {/* Top Navbar */}
       <MaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
 
-      {/* Sidebar */}
       <MaleSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -150,15 +149,13 @@ export const NotificationsPage = () => {
         onItemClick={handleNavigationClick}
       />
 
-      {/* Top App Bar */}
       <TopAppBar
-        title="Notifications"
+        title={t('notifications')}
         icon="notifications"
-        onFilterClick={() => {}}
-        onSearch={() => {}}
+        onFilterClick={() => { }}
+        onSearch={() => { }}
       />
 
-      {/* Filter Chips */}
       <div className="px-4 pb-3 pt-1">
         <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
           {filterOptions.map((filter) => {
@@ -167,11 +164,10 @@ export const NotificationsPage = () => {
               <button
                 key={filter.id}
                 onClick={() => setSelectedFilter(filter.id)}
-                className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 transition-all active:scale-95 ${
-                  isActive
+                className={`flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full px-5 transition-all active:scale-95 ${isActive
                     ? 'bg-primary shadow-lg shadow-primary/25 text-white'
                     : 'bg-white dark:bg-[#342d18] border border-gray-200 dark:border-transparent text-slate-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#3d2a1a]'
-                }`}
+                  }`}
               >
                 <p className={`text-sm ${isActive ? 'font-bold' : 'font-medium'}`}>
                   {filter.label}
@@ -187,19 +183,17 @@ export const NotificationsPage = () => {
         </div>
       </div>
 
-      {/* Mark All Read Button */}
       {unreadCount > 0 && (
         <div className="px-4 pb-2">
           <button
             onClick={handleMarkAllRead}
             className="text-sm font-medium text-primary hover:underline"
           >
-            Mark all as read
+            {t('markAllRead')}
           </button>
         </div>
       )}
 
-      {/* Notifications List */}
       <main className="px-4">
         {filteredNotifications.length > 0 ? (
           <div className="space-y-2">
@@ -207,13 +201,11 @@ export const NotificationsPage = () => {
               <div
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
-                className={`flex gap-3 p-3 rounded-xl cursor-pointer transition-all active:scale-98 ${
-                  notification.isRead
+                className={`flex gap-3 p-3 rounded-xl cursor-pointer transition-all active:scale-98 ${notification.isRead
                     ? 'bg-white dark:bg-[#342d18]'
                     : 'bg-primary/5 dark:bg-primary/10 border border-primary/20'
-                }`}
+                  }`}
               >
-                {/* Avatar/Icon */}
                 <div className="shrink-0">
                   {notification.avatar ? (
                     <img
@@ -232,7 +224,6 @@ export const NotificationsPage = () => {
                   )}
                 </div>
 
-                {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -275,13 +266,12 @@ export const NotificationsPage = () => {
               className="text-gray-400 dark:text-gray-600 mb-4"
             />
             <p className="text-gray-500 dark:text-[#cc8ea3] text-center">
-              No notifications found
+              {t('noNotificationsFound')}
             </p>
           </div>
         )}
       </main>
 
-      {/* Bottom Navigation Bar */}
       <BottomNavigation items={navigationItems} onItemClick={handleNavigationClick} />
     </div>
   );

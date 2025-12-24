@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../core/context/AuthContext';
@@ -8,13 +7,12 @@ import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
 import { FemaleSidebar } from '../components/FemaleSidebar';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import { EditProfileModal } from '../components/EditProfileModal';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 export const MyProfilePage = () => {
+  const { t, changeLanguage, currentLanguage } = useTranslation();
   const navigate = useNavigate();
-  const { user, updateUser, isLoading: isAuthLoading } = useAuth();
+  const { user, logout, isLoading: isAuthLoading } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -95,7 +93,7 @@ export const MyProfilePage = () => {
           >
             <MaterialSymbol name="arrow_back" size={20} />
           </button>
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white">My Profile</h1>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white">{t('myProfile')}</h1>
         </div>
       </header>
 
@@ -127,7 +125,7 @@ export const MyProfilePage = () => {
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{name}</h2>
                 <MaterialSymbol name="verified" className="text-blue-500" size={20} />
               </div>
-              <p className="text-sm text-gray-600 dark:text-[#cbbc90]">{age} years old</p>
+              <p className="text-sm text-gray-600 dark:text-[#cbbc90]">{t('yearsOld', { count: age })}</p>
               <div className="flex items-center justify-center gap-1 mt-1">
                 <MaterialSymbol name="location_on" size={16} className="text-gray-500 dark:text-[#cbbc90]" />
                 <p className="text-sm text-gray-600 dark:text-[#cbbc90]">{location}</p>
@@ -143,8 +141,8 @@ export const MyProfilePage = () => {
               <MaterialSymbol name="verified" className="text-green-600 dark:text-green-400" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">Profile Verified</p>
-              <p className="text-xs text-gray-600 dark:text-[#cbbc90]">Your profile has been verified by our team</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{t('profileVerified')}</p>
+              <p className="text-xs text-gray-600 dark:text-[#cbbc90]">{t('profileVerifiedDesc')}</p>
             </div>
           </div>
         </div>
@@ -178,7 +176,7 @@ export const MyProfilePage = () => {
               </div>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activeConversations}</p>
-            <p className="text-xs text-gray-500 dark:text-[#cbbc90] mt-1">Chats</p>
+            <p className="text-xs text-gray-500 dark:text-[#cbbc90] mt-1">{t('chats')}</p>
           </div>
         </div>
 
@@ -193,7 +191,7 @@ export const MyProfilePage = () => {
               onClick={() => navigate('/female/earnings')}
               className="px-4 py-2 bg-primary text-slate-900 font-bold rounded-lg hover:bg-yellow-400 transition-colors text-sm"
             >
-              View Earnings
+              {t('viewEarnings')}
             </button>
           </div>
         </div>
@@ -202,7 +200,7 @@ export const MyProfilePage = () => {
         {photos.length > 0 && (
           <div className="bg-white dark:bg-[#342d18] rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Photos</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('photos')}</h3>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {photos.map((photo, index) => (
@@ -227,7 +225,7 @@ export const MyProfilePage = () => {
         <div className="bg-white dark:bg-[#342d18] rounded-xl p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <MaterialSymbol name="insights" className="text-primary" />
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Activity Summary</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('activitySummary')}</h3>
           </div>
 
           <div className="space-y-3">
@@ -277,14 +275,14 @@ export const MyProfilePage = () => {
           <div className="px-6 py-4 border-b border-gray-200 dark:border-white/5">
             <div className="flex items-center gap-2">
               <MaterialSymbol name="settings" className="text-primary" />
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Settings</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('settings')}</h3>
             </div>
           </div>
 
           <div className="divide-y divide-gray-200 dark:divide-white/5">
             {/* Privacy Settings */}
             <div className="px-6 py-4">
-              <h4 className="text-sm font-semibold text-gray-700 dark:text-[#cbbc90] mb-3">Privacy</h4>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-[#cbbc90] mb-3">{t('privacy')}</h4>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -323,7 +321,7 @@ export const MyProfilePage = () => {
 
             {/* Notification Settings */}
             <div className="px-6 py-4">
-              <h4 className="text-sm font-semibold text-gray-700 dark:text-[#cbbc90] mb-3">Notifications</h4>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-[#cbbc90] mb-3">{t('notifications')}</h4>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -362,9 +360,34 @@ export const MyProfilePage = () => {
               </div>
             </div>
 
+            {/* Language Settings */}
+            <div className="px-6 py-4">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-[#cbbc90] mb-3">{t('language')}</h4>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => changeLanguage('en')}
+                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${currentLanguage === 'en'
+                    ? 'bg-primary text-slate-900 border-primary font-bold'
+                    : 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                    }`}
+                >
+                  English
+                </button>
+                <button
+                  onClick={() => changeLanguage('hi')}
+                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${currentLanguage === 'hi'
+                    ? 'bg-primary text-slate-900 border-primary font-bold'
+                    : 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                    }`}
+                >
+                  हिंदी
+                </button>
+              </div>
+            </div>
+
             {/* Account Settings */}
             <div className="px-6 py-4">
-              <h4 className="text-sm font-semibold text-gray-700 dark:text-[#cbbc90] mb-3">Account</h4>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-[#cbbc90] mb-3">{t('account')}</h4>
 
               <div className="space-y-2">
                 <button
@@ -380,22 +403,21 @@ export const MyProfilePage = () => {
 
                 <button
                   onClick={() => {
-                    // TODO: Implement change password
-                    alert('Change password functionality coming soon');
+                    logout();
+                    navigate('/login');
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-[#2a2515] transition-colors"
+                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <MaterialSymbol name="lock" className="text-gray-600 dark:text-[#cbbc90]" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Change Password</span>
+                    <MaterialSymbol name="logout" className="text-gray-600 dark:text-[#cbbc90]" />
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{t('logout')}</span>
                   </div>
                   <MaterialSymbol name="chevron_right" className="text-gray-400" />
                 </button>
 
                 <button
                   onClick={() => {
-                    // TODO: Implement account deletion
-                    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                    if (window.confirm(t('deleteAccountConfirm'))) {
                       alert('Account deletion functionality coming soon');
                     }
                   }}
@@ -403,7 +425,7 @@ export const MyProfilePage = () => {
                 >
                   <div className="flex items-center gap-3">
                     <MaterialSymbol name="delete" className="text-red-500" />
-                    <span className="text-sm font-medium text-red-600 dark:text-red-400">Delete Account</span>
+                    <span className="text-sm font-medium text-red-600 dark:text-red-400">{t('deleteAccount')}</span>
                   </div>
                   <MaterialSymbol name="chevron_right" className="text-gray-400" />
                 </button>

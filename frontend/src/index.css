@@ -11,6 +11,9 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
   background-color: #fff8fb;
+  touch-action: manipulation;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (prefers-color-scheme: dark) {

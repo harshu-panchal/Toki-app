@@ -9,9 +9,12 @@ import { InsufficientBalanceModal } from '../components/InsufficientBalanceModal
 import { HiSentModal } from '../components/HiSentModal';
 import offlineQueueService from '../../../core/services/offlineQueue.service';
 
+import { useTranslation } from '../../../core/hooks/useTranslation';
+
 type FilterType = 'all' | 'online' | 'new' | 'popular';
 
 export const NearbyFemalesPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { navigationItems, handleNavigationClick } = useMaleNavigation();
   const { coinBalance, updateBalance } = useGlobalState();
@@ -168,25 +171,25 @@ export const NearbyFemalesPage = () => {
               className={`pb-1 ${activeFilter === 'all' ? 'text-slate-900 dark:text-white border-b-2 border-primary' : 'text-slate-500 dark:text-slate-400'}`}
               onClick={() => setActiveFilter('all')}
             >
-              Recommend
+              {t('recommend')}
             </button>
             <button
               className={`pb-1 ${activeFilter === 'online' ? 'text-slate-900 dark:text-white border-b-2 border-primary' : 'text-slate-500 dark:text-slate-400'}`}
               onClick={() => setActiveFilter('online')}
             >
-              Online
+              {t('onlineTab')}
             </button>
             <button
               className={`pb-1 ${activeFilter === 'new' ? 'text-slate-900 dark:text-white border-b-2 border-primary' : 'text-slate-500 dark:text-slate-400'}`}
               onClick={() => setActiveFilter('new')}
             >
-              New
+              {t('newTab')}
             </button>
             <button
               className={`pb-1 ${activeFilter === 'popular' ? 'text-slate-900 dark:text-white border-b-2 border-primary' : 'text-slate-500 dark:text-slate-400'}`}
               onClick={() => setActiveFilter('popular')}
             >
-              Popular
+              {t('popularTab')}
             </button>
           </div>
           <button onClick={fetchProfiles} className="text-primary p-1">
@@ -217,9 +220,9 @@ export const NearbyFemalesPage = () => {
         {!isLoading && !error && profiles.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <span className="text-6xl mb-4">🔍</span>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No profiles found</h3>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('noProfilesFound', { defaultValue: 'No profiles found' })}</h3>
             <p className="text-gray-500 dark:text-gray-400">
-              No approved female profiles are available right now. Check back later!
+              {t('noProfilesFoundDesc', { defaultValue: 'No approved female profiles are available right now. Check back later!' })}
             </p>
           </div>
         )}
@@ -273,7 +276,7 @@ export const NearbyFemalesPage = () => {
               ) : (
                 <>
                   <span>👋</span>
-                  <span>Hi</span>
+                  <span>{t('hi')}</span>
                 </>
               )}
             </button>

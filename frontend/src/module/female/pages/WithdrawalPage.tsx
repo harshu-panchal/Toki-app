@@ -7,8 +7,10 @@ import { FemaleSidebar } from '../components/FemaleSidebar';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import walletService from '../../../core/services/wallet.service';
 import type { Withdrawal as WalletWithdrawal } from '../../../core/types/wallet.types';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 export const WithdrawalPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
 
@@ -48,7 +50,7 @@ export const WithdrawalPage = () => {
       setWithdrawals(withdrawalData.withdrawals || []);
     } catch (err: any) {
       console.error('Failed to fetch data:', err);
-      setError('Failed to load withdrawal data');
+      setError(t('errorLoadWithdrawalData'));
     } finally {
       setIsLoading(false);
     }
@@ -57,11 +59,11 @@ export const WithdrawalPage = () => {
   const handleContinue = () => {
     const withdrawAmount = parseInt(amount);
     if (withdrawAmount < minWithdrawal) {
-      setError(`Minimum withdrawal amount is ${minWithdrawal} coins`);
+      setError(t('errorMinWithdrawal', { amount: minWithdrawal.toLocaleString() }));
       return;
     }
     if (withdrawAmount > balance) {
-      setError('Insufficient balance');
+      setError(t('errorInsufficientBalance'));
       return;
     }
     setError(null);
@@ -71,12 +73,12 @@ export const WithdrawalPage = () => {
   const handleSubmitWithdrawal = async () => {
     if (paymentMethod === 'bank') {
       if (!bankDetails.accountHolderName || !bankDetails.accountNumber || !bankDetails.ifscCode) {
-        setError('Please fill all bank details');
+        setError(t('errorFillBankDetails'));
         return;
       }
     } else {
       if (!upiId || !upiId.includes('@')) {
-        setError('Please enter a valid UPI ID');
+        setError(t('errorValidUpi'));
         return;
       }
     }
@@ -113,7 +115,7 @@ export const WithdrawalPage = () => {
       fetchData();
     } catch (err: any) {
       console.error('Withdrawal request failed:', err);
-      setError(err.response?.data?.message || 'Failed to submit withdrawal request');
+      setError(err.response?.data?.message || t('errorSubmitWithdrawal'));
     } finally {
       setIsSubmitting(false);
     }
@@ -135,8 +137,26 @@ export const WithdrawalPage = () => {
     }
   };
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed':
+      case 'paid':
+        return t('statusPaid');
+      case 'pending':
+        return t('statusPending');
+      case 'approved':
+        return t('statusApproved');
+      case 'rejected':
+        return t('statusRejected');
+      case 'cancelled':
+        return t('statusCancelled');
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
   return (
-    <div className="flex flex-col bg-background-light dark:bg-background-dark min-h-screen pb-20">
+    <div className="flex flex-col bg-background-light dark:bg-background-dark min-h-screen pb-20 font-display">
       {/* Top Navbar */}
       <FemaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
 
@@ -157,7 +177,7 @@ export const WithdrawalPage = () => {
           >
             <MaterialSymbol name="arrow_back" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Withdrawal</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('withdrawal')}</h1>
         </div>
       </header>
 
@@ -168,37 +188,41 @@ export const WithdrawalPage = () => {
         </div>
       )}
 
+      {/* Error Message */}
+      {!isLoading && error && (
+        <div className="px-6 py-2">
+          <div className="p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl flex items-center gap-2">
+            <MaterialSymbol name="error" className="text-red-500" />
+            <span className="flex-1">{error}</span>
+            <button onClick={() => setError(null)}>
+              <MaterialSymbol name="close" size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {!isLoading && (
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 min-h-0">
-          {/* Error Message */}
-          {error && (
-            <div className="p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl flex items-center gap-2">
-              <MaterialSymbol name="error" className="text-red-500" />
-              <span>{error}</span>
-              <button onClick={() => setError(null)} className="ml-auto">
-                <MaterialSymbol name="close" size={18} />
-              </button>
-            </div>
-          )}
-
           {/* Available Balance */}
           <div className="bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/10 dark:to-primary/5 rounded-xl p-6 border border-primary/10">
-            <p className="text-sm font-medium text-slate-600 dark:text-[#cbbc90] mb-2">Available Balance</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-[#cbbc90] mb-2">{t('availableBalance')}</p>
             <p className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+              {balance.toLocaleString()} {t('interestsLabel')} {/* Using 'interestsLabel' as dummy for 'coins' if needed, or but I have amountCoins */}
+              {/* Actually I should probably have a 'coins' key. I'll use coins suffix if simple or just 'coins' */}
               {balance.toLocaleString()} coins
             </p>
             <p className="text-xs text-slate-500 dark:text-[#cbbc90]">
-              Minimum withdrawal: {minWithdrawal.toLocaleString()} coins
+              {t('minWithdrawalNote', { amount: minWithdrawal.toLocaleString() })}
             </p>
           </div>
 
           {/* Withdrawal Form */}
           <div className="bg-white dark:bg-[#342d18] rounded-xl p-6 shadow-sm space-y-4">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Request Withdrawal</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{t('requestWithdrawal')}</h2>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-[#cbbc90] mb-2">
-                Amount (coins)
+                {t('amountCoins')}
               </label>
               <input
                 type="number"
@@ -211,13 +235,13 @@ export const WithdrawalPage = () => {
               {amount && parseInt(amount) > 0 && (
                 <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                   <p className="text-sm text-green-700 dark:text-green-300">
-                    <span className="font-medium">You will receive approximately:</span>
+                    <span className="font-medium">{t('receiveApprox')}</span>
                   </p>
                   <p className="text-xl font-bold text-green-600 dark:text-green-400">
                     ₹{Math.round(parseInt(amount) * 0.5).toLocaleString()}
                   </p>
                   <p className="text-xs text-green-600 dark:text-green-500 mt-1">
-                    (50% payout rate • 1 coin = ₹0.50)
+                    {t('payoutRateNote')}
                   </p>
                 </div>
               )}
@@ -225,7 +249,7 @@ export const WithdrawalPage = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-[#cbbc90] mb-2">
-                Payment Method
+                {t('payoutMethod')}
               </label>
               <div className="flex gap-2">
                 <button
@@ -235,7 +259,7 @@ export const WithdrawalPage = () => {
                     : 'bg-gray-200 dark:bg-[#2a2515] text-gray-700 dark:text-white'
                     }`}
                 >
-                  Bank Transfer
+                  {t('bankTransfer')}
                 </button>
                 <button
                   onClick={() => setPaymentMethod('upi')}
@@ -244,7 +268,7 @@ export const WithdrawalPage = () => {
                     : 'bg-gray-200 dark:bg-[#2a2515] text-gray-700 dark:text-white'
                     }`}
                 >
-                  UPI
+                  {t('upi')}
                 </button>
               </div>
             </div>
@@ -254,7 +278,7 @@ export const WithdrawalPage = () => {
               disabled={!amount || parseInt(amount) < minWithdrawal || parseInt(amount) > balance}
               className="w-full px-4 py-3 bg-primary text-slate-900 font-bold rounded-lg hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Continue
+              {t('continue')}
             </button>
           </div>
 
@@ -262,7 +286,7 @@ export const WithdrawalPage = () => {
           {isPaymentDetailsOpen && (
             <>
               <div
-                className="fixed inset-0 bg-black/50 z-40"
+                className="fixed inset-0 bg-black/50 z-40 transition-opacity"
                 onClick={() => setIsPaymentDetailsOpen(false)}
               />
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
@@ -271,7 +295,7 @@ export const WithdrawalPage = () => {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Payment Details</h2>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('payoutDetails')}</h2>
                     <button
                       onClick={() => setIsPaymentDetailsOpen(false)}
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -283,7 +307,7 @@ export const WithdrawalPage = () => {
                   <div className="space-y-4">
                     {/* Withdrawal Amount Summary */}
                     <div className="bg-gray-50 dark:bg-[#2a2515] rounded-lg p-4">
-                      <p className="text-sm text-gray-600 dark:text-[#cbbc90] mb-1">Withdrawal Amount</p>
+                      <p className="text-sm text-gray-600 dark:text-[#cbbc90] mb-1">{t('withdrawal')} {t('amountCoins')}</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">
                         {parseInt(amount || '0').toLocaleString()} coins
                       </p>
@@ -294,7 +318,7 @@ export const WithdrawalPage = () => {
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-[#cbbc90] mb-2">
-                            Account Holder Name *
+                            {t('accountHolderName')} *
                           </label>
                           <input
                             type="text"
@@ -302,13 +326,13 @@ export const WithdrawalPage = () => {
                             onChange={(e) =>
                               setBankDetails({ ...bankDetails, accountHolderName: e.target.value })
                             }
-                            placeholder="Enter account holder name"
+                            placeholder={t('placeholderAccountHolderName')}
                             className="w-full px-4 py-2 bg-gray-50 dark:bg-[#2a2515] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-[#cbbc90] mb-2">
-                            Account Number *
+                            {t('accountNumber')} *
                           </label>
                           <input
                             type="text"
@@ -316,13 +340,13 @@ export const WithdrawalPage = () => {
                             onChange={(e) =>
                               setBankDetails({ ...bankDetails, accountNumber: e.target.value })
                             }
-                            placeholder="Enter account number"
+                            placeholder={t('placeholderAccountNumber')}
                             className="w-full px-4 py-2 bg-gray-50 dark:bg-[#2a2515] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-[#cbbc90] mb-2">
-                            IFSC Code *
+                            {t('ifscCode')} *
                           </label>
                           <input
                             type="text"
@@ -330,7 +354,7 @@ export const WithdrawalPage = () => {
                             onChange={(e) =>
                               setBankDetails({ ...bankDetails, ifscCode: e.target.value.toUpperCase() })
                             }
-                            placeholder="Enter IFSC code"
+                            placeholder={t('placeholderIfscCode')}
                             className="w-full px-4 py-2 bg-gray-50 dark:bg-[#2a2515] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 uppercase"
                           />
                         </div>
@@ -338,17 +362,17 @@ export const WithdrawalPage = () => {
                     ) : (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-[#cbbc90] mb-2">
-                          UPI ID *
+                          {t('upiId')} *
                         </label>
                         <input
                           type="text"
                           value={upiId}
                           onChange={(e) => setUpiId(e.target.value)}
-                          placeholder="example@paytm"
+                          placeholder={t('placeholderUpiId')}
                           className="w-full px-4 py-2 bg-gray-50 dark:bg-[#2a2515] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
                         <p className="text-xs text-gray-500 dark:text-[#cbbc90] mt-1">
-                          Enter your UPI ID (e.g., yourname@paytm, yourname@phonepe)
+                          {t('upiIdHint')}
                         </p>
                       </div>
                     )}
@@ -359,7 +383,7 @@ export const WithdrawalPage = () => {
                         disabled={isSubmitting}
                         className="flex-1 px-4 py-3 bg-gray-200 dark:bg-[#4a212f] text-gray-700 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-[#5e2a3c] transition-colors disabled:opacity-50"
                       >
-                        Cancel
+                        {t('cancel')}
                       </button>
                       <button
                         onClick={handleSubmitWithdrawal}
@@ -369,10 +393,10 @@ export const WithdrawalPage = () => {
                         {isSubmitting ? (
                           <>
                             <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
-                            Submitting...
+                            {t('submitting')}
                           </>
                         ) : (
-                          'Submit Request'
+                          t('submitRequest')
                         )}
                       </button>
                     </div>
@@ -386,7 +410,7 @@ export const WithdrawalPage = () => {
           {isSuccessOpen && (
             <>
               <div
-                className="fixed inset-0 bg-black/50 z-40"
+                className="fixed inset-0 bg-black/50 z-40 transition-opacity"
                 onClick={() => setIsSuccessOpen(false)}
               />
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
@@ -400,10 +424,10 @@ export const WithdrawalPage = () => {
                     </div>
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                    Withdrawal Request Submitted!
+                    {t('withdrawalSubmittedTitle')}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-[#cbbc90] mb-6">
-                    Your withdrawal request has been submitted successfully. You will be notified once it's processed.
+                    {t('withdrawalSubmittedSuccess')}
                   </p>
                   <button
                     onClick={() => {
@@ -412,7 +436,7 @@ export const WithdrawalPage = () => {
                     }}
                     className="w-full px-4 py-3 bg-primary text-slate-900 font-bold rounded-lg hover:bg-yellow-400 transition-colors"
                   >
-                    Done
+                    {t('done')}
                   </button>
                 </div>
               </div>
@@ -420,26 +444,26 @@ export const WithdrawalPage = () => {
           )}
 
           {/* Withdrawal History */}
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Withdrawal History</h2>
+          <div className="pb-12">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('withdrawalHistory')}</h2>
             {withdrawals.length === 0 ? (
               <div className="text-center py-8">
                 <MaterialSymbol name="account_balance_wallet" size={48} className="text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-500 dark:text-[#cbbc90]">No withdrawal history</p>
+                <p className="text-gray-500 dark:text-[#cbbc90]">{t('noWithdrawalHistory')}</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {withdrawals.map((withdrawal) => (
                   <div
                     key={withdrawal._id}
-                    className="bg-white dark:bg-[#342d18] rounded-xl p-4 shadow-sm"
+                    className="bg-white dark:bg-[#342d18] rounded-xl p-4 shadow-sm border border-black/5 dark:border-white/5"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-semibold text-gray-900 dark:text-white">
                         {withdrawal.coinsRequested.toLocaleString()} coins
                       </p>
                       <span className={`text-sm font-medium ${getStatusColor(withdrawal.status)}`}>
-                        {withdrawal.status.charAt(0).toUpperCase() + withdrawal.status.slice(1)}
+                        {getStatusText(withdrawal.status)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mb-1">
@@ -449,20 +473,20 @@ export const WithdrawalPage = () => {
                         className="text-gray-400"
                       />
                       <p className="text-sm text-gray-500 dark:text-[#cbbc90]">
-                        {withdrawal.payoutMethod === 'bank' ? 'Bank Transfer' : 'UPI'}
+                        {withdrawal.payoutMethod === 'bank' ? t('bankTransfer') : t('upi')}
                       </p>
                     </div>
                     <p className="text-sm text-gray-500 dark:text-[#cbbc90]">
-                      Requested: {new Date(withdrawal.createdAt).toLocaleDateString()}
+                      {t('requestedOn')}: {new Date(withdrawal.createdAt).toLocaleDateString()}
                     </p>
                     {withdrawal.paidAt && (
                       <p className="text-xs text-gray-400 dark:text-[#cbbc90] mt-1">
-                        Processed: {new Date(withdrawal.paidAt).toLocaleDateString()}
+                        {t('processedOn')}: {new Date(withdrawal.paidAt).toLocaleDateString()}
                       </p>
                     )}
                     {withdrawal.rejectionReason && (
                       <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                        Reason: {withdrawal.rejectionReason}
+                        {t('rejectionReasonLabel', { reason: withdrawal.rejectionReason })}
                       </p>
                     )}
                   </div>

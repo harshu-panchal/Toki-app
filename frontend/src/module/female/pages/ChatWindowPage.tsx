@@ -18,9 +18,11 @@ export const ChatWindowPage = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
   const { navigationItems, handleNavigationClick } = useFemaleNavigation();
-  const { coinBalance } = useGlobalState();
+  const { coinBalance, chatCache, saveToChatCache } = useGlobalState();
 
-  const [messages, setMessages] = useState<ApiMessage[]>([]);
+  const [messages, setMessages] = useState<ApiMessage[]>(() => {
+    return (chatId && chatCache[chatId]) ? chatCache[chatId] : [];
+  });
   const [chatInfo, setChatInfo] = useState<ApiChat | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -81,6 +83,7 @@ export const ChatWindowPage = () => {
         // Get messages
         const { messages: msgData } = await chatService.getChatMessages(chatId);
         setMessages(msgData);
+        saveToChatCache(chatId, msgData);
 
         // Join chat room
         socketService.connect();

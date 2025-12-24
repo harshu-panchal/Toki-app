@@ -15,17 +15,21 @@ import chatService from '../../../core/services/chat.service';
 import socketService from '../../../core/services/socket.service';
 import offlineQueueService from '../../../core/services/offlineQueue.service';
 import type { Chat as ApiChat, Message as ApiMessage, IntimacyInfo } from '../../../core/types/chat.types';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 // Message cost constant
 const MESSAGE_COST = 50;
 
 export const ChatWindowPage = () => {
+  const { t } = useTranslation();
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
-  const { coinBalance, updateBalance, user } = useGlobalState(); // Use global state
-  const { requestCall, isInCall, callPrice } = useVideoCall(); // Video call context
+  const { coinBalance, updateBalance, user, chatCache, saveToChatCache } = useGlobalState();
+  const { requestCall, isInCall, callPrice } = useVideoCall();
 
-  const [messages, setMessages] = useState<ApiMessage[]>([]);
+  const [messages, setMessages] = useState<ApiMessage[]>(() => {
+    return (chatId && chatCache[chatId]) ? chatCache[chatId] : [];
+  });
   const [chatInfo, setChatInfo] = useState<ApiChat | null>(null);
   const [intimacy, setIntimacy] = useState<IntimacyInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,14 +43,13 @@ export const ChatWindowPage = () => {
   const [levelUpInfo, setLevelUpInfo] = useState<IntimacyInfo | null>(null);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
   const [requiredCoinsModal, setRequiredCoinsModal] = useState(MESSAGE_COST);
-  const [modalAction, setModalAction] = useState('perform this action');
-
+  const [modalAction, setModalAction] = useState(t('actionPerform'));
 
   // Typing indicator
   const [isOtherTyping, setIsOtherTyping] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const currentUserId = user?._id || (user as any)?.id;
+  const currentUserId = user?.id;
 
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -72,8 +75,7 @@ export const ChatWindowPage = () => {
         // Get messages
         const { messages: msgData } = await chatService.getChatMessages(chatId);
         setMessages(msgData);
-
-        // Balance comes from global state (auto-synced)
+        saveToChatCache(chatId, msgData);
 
         // Join chat room
         socketService.connect();
@@ -82,7 +84,7 @@ export const ChatWindowPage = () => {
         setError(null);
       } catch (err: any) {
         console.error('Failed to load chat:', err);
-        setError(err.response?.data?.message || 'Failed to load chat');
+        setError(err.response?.data?.message || t('errorFailedToLoadChat'));
       } finally {
         setIsLoading(false);
       }
@@ -95,16 +97,16 @@ export const ChatWindowPage = () => {
         socketService.leaveChat(chatId);
       }
     };
-  }, [chatId, navigate]);
+  }, [chatId, navigate, t]);
 
   // Check balance on load and show modal if insufficient
   useEffect(() => {
     if (!isLoading && coinBalance < MESSAGE_COST) {
       setRequiredCoinsModal(MESSAGE_COST);
-      setModalAction('send a message');
+      setModalAction(t('actionSendMessage'));
       setIsBalanceModalOpen(true);
     }
-  }, [isLoading, coinBalance]);
+  }, [isLoading, coinBalance, t]);
 
   // Process offline queue when back online
   useEffect(() => {
@@ -141,19 +143,15 @@ export const ChatWindowPage = () => {
       });
     };
 
-    // Set callback for when back online
     offlineQueueService.setOnlineCallback(processOfflineQueue);
 
-    // Also process on mount if there are queued messages
     if (offlineQueueService.getQueueSize() > 0) {
       processOfflineQueue();
     }
   }, [chatId]);
 
-
   // Socket event listeners
   useEffect(() => {
-    // New message received
     const handleNewMessage = (data: { chatId: string; message: ApiMessage }) => {
       if (data.chatId === chatId) {
         setMessages(prev => {
@@ -164,16 +162,12 @@ export const ChatWindowPage = () => {
       }
     };
 
-    // Balance update handled by GlobalStateContext
-
-    // Typing indicator
     const handleTyping = (data: { chatId: string; userId: string; isTyping: boolean }) => {
       if (data.chatId === chatId && data.userId !== currentUserId) {
         setIsOtherTyping(data.isTyping);
       }
     };
 
-    // Level up event
     const handleLevelUp = (data: { chatId: string; levelInfo: IntimacyInfo }) => {
       if (data.chatId === chatId) {
         setIntimacy(data.levelInfo);
@@ -181,7 +175,6 @@ export const ChatWindowPage = () => {
       }
     };
 
-    // User online/offline status updates
     const handleUserOnline = (data: { userId: string }) => {
       if (chatInfo && data.userId === chatInfo.otherUser._id) {
         setChatInfo(prev => prev ? {
@@ -224,23 +217,20 @@ export const ChatWindowPage = () => {
   const handleSendMessage = async (content: string) => {
     if (!chatId || isSending) return;
 
-    // Check balance
     if (coinBalance < MESSAGE_COST) {
       setRequiredCoinsModal(MESSAGE_COST);
-      setModalAction('send a message');
+      setModalAction(t('actionSendMessage'));
       setIsBalanceModalOpen(true);
       return;
     }
 
-    // STEP 1: Deduct coins IMMEDIATELY (optimistic update)
     const newBalance = coinBalance - MESSAGE_COST;
     updateBalance(newBalance);
 
-    // STEP 2: Create optimistic message for UI
     const optimisticMessage: ApiMessage = {
       _id: `temp_${Date.now()}`,
       chatId: chatId,
-      senderId: user?._id || (user as any)?.id,
+      senderId: user?.id || '',
       content,
       messageType: 'text',
       status: 'sending',
@@ -256,17 +246,14 @@ export const ChatWindowPage = () => {
 
       const result = await chatService.sendMessage(chatId, content);
 
-      // STEP 3: Replace optimistic message with real message
       setMessages(prev => prev.map(m =>
         m._id === optimisticMessage._id ? result.message : m
       ));
 
-      // Update balance from server (should match our optimistic update)
       if (result.newBalance !== undefined) {
         updateBalance(result.newBalance);
       }
 
-      // Check for level up
       if (result.levelUp) {
         setLevelUpInfo(result.levelUp);
         setIntimacy(result.intimacy);
@@ -277,30 +264,22 @@ export const ChatWindowPage = () => {
     } catch (err: any) {
       console.error('Failed to send message:', err);
 
-      // STEP 4: If offline or network error, queue the message
-      // IMPORTANT: Coins already deducted, will NOT be refunded
       if (!offlineQueueService.isOnline() || err.code === 'ERR_NETWORK') {
-        console.log('[ChatWindow] Offline detected, queuing message');
-
         offlineQueueService.queueMessage('message', {
           chatId,
           content,
           optimisticMessageId: optimisticMessage._id,
         }, MESSAGE_COST);
 
-        // Update message status to 'queued'
         setMessages(prev => prev.map(m =>
           m._id === optimisticMessage._id
             ? { ...m, status: 'queued' as any }
             : m
         ));
 
-        setError('Message queued. Will send when back online.');
+        setError(t('messageQueued'));
       } else {
-        // Other errors (not network related)
-        setError(err.response?.data?.message || 'Failed to send message');
-
-        // Remove optimistic message on non-network errors
+        setError(err.response?.data?.message || t('errorFailedToSendMessage'));
         setMessages(prev => prev.filter(m => m._id !== optimisticMessage._id));
       }
     } finally {
@@ -308,26 +287,23 @@ export const ChatWindowPage = () => {
     }
   };
 
-
   // Send gift
   const handleSendGift = async (giftIds: string[], totalCost: number) => {
     if (!chatId || isSending) return;
 
-    // STEP 1: Deduct coins IMMEDIATELY (optimistic update)
     const newBalance = coinBalance - totalCost;
     updateBalance(newBalance);
 
-    // STEP 2: Create optimistic gift message for UI
     const optimisticMessage: ApiMessage = {
       _id: `temp_gift_${Date.now()}`,
       chatId: chatId,
-      senderId: user?._id || (user as any)?.id,
-      content: 'Sent a gift',
+      senderId: user?.id || '',
+      content: t('sentGift'),
       messageType: 'gift',
       status: 'sending',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      gifts: giftIds.map(id => ({ giftId: id, giftName: 'Gift', giftImage: '', giftCost: 0 })) // Minimal representation
+      gifts: giftIds.map(id => ({ giftId: id, giftName: 'Gift', giftImage: '', giftCost: 0 }))
     } as any;
 
     setMessages(prev => [...prev, optimisticMessage]);
@@ -339,17 +315,14 @@ export const ChatWindowPage = () => {
 
       const result = await chatService.sendGift(chatId, giftIds);
 
-      // STEP 3: Replace optimistic message with real message
       setMessages(prev => prev.map(m =>
         m._id === optimisticMessage._id ? result.message : m
       ));
 
-      // Update balance from server
       if (result.newBalance !== undefined) {
         updateBalance(result.newBalance);
       }
 
-      // Check for level up
       if (result.levelUp) {
         setLevelUpInfo(result.levelUp);
         setIntimacy(result.intimacy);
@@ -360,33 +333,28 @@ export const ChatWindowPage = () => {
     } catch (err: any) {
       console.error('Failed to send gift:', err);
 
-      // STEP 4: If offline or network error, queue the gift
       if (!offlineQueueService.isOnline() || err.code === 'ERR_NETWORK') {
-        console.log('[ChatWindow] Offline detected, queuing gift');
-
         offlineQueueService.queueMessage('gift', {
           chatId,
           giftIds,
           optimisticMessageId: optimisticMessage._id,
         }, totalCost);
 
-        // Update message status to 'queued'
         setMessages(prev => prev.map(m =>
           m._id === optimisticMessage._id
             ? { ...m, status: 'queued' as any }
             : m
         ));
 
-        setError('Gift queued. Will send when back online.');
+        setError(t('giftQueued'));
       } else {
         const errorMessage = err.response?.data?.message || '';
         if (errorMessage.toLowerCase().includes('insufficient') || errorMessage.toLowerCase().includes('balance')) {
-          setModalAction('send this gift');
+          setModalAction(t('actionSendGift'));
           setIsBalanceModalOpen(true);
         } else {
-          setError(errorMessage || 'Failed to send gift');
+          setError(errorMessage || t('errorFailedToSendGift'));
         }
-        // Remove optimistic message on non-network errors
         setMessages(prev => prev.filter(m => m._id !== optimisticMessage._id));
       }
     } finally {
@@ -418,20 +386,19 @@ export const ChatWindowPage = () => {
   if (!chatInfo) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background-light dark:bg-background-dark p-4">
-        <p className="text-gray-500 dark:text-gray-400 mb-4">Chat not found</p>
+        <p className="text-gray-500 dark:text-gray-400 mb-4">{t('chatNotFound')}</p>
         <button
           onClick={() => navigate('/male/chats')}
           className="px-4 py-2 bg-primary text-white rounded-lg"
         >
-          Go Back
+          {t('goBack')}
         </button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark overflow-hidden">
-      {/* Header with coin balance and intimacy */}
+    <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark overflow-hidden font-display">
       <ChatWindowHeader
         userName={chatInfo.otherUser.name}
         userAvatar={chatInfo.otherUser.avatar || ''}
@@ -444,18 +411,18 @@ export const ChatWindowPage = () => {
         showVideoCall={true}
         onVideoCall={async () => {
           if (isInCall) {
-            setError('You are already in a call');
+            setError(t('errorAlreadyInCall'));
             return;
           }
           if (coinBalance < callPrice) {
             setRequiredCoinsModal(callPrice);
-            setModalAction('start a video call');
+            setModalAction(t('actionVideoCall'));
             setIsBalanceModalOpen(true);
             return;
           }
 
           if (!chatInfo.otherUser.isOnline) {
-            setError('User is currently offline');
+            setError(t('errorUserOffline'));
             return;
           }
           try {
@@ -464,16 +431,15 @@ export const ChatWindowPage = () => {
               chatInfo.otherUser.name,
               chatInfo.otherUser.avatar || '',
               chatId!,
-              user?.profile?.name || 'User',
-              user?.profile?.photos?.[0]?.url || ''
+              user?.name || 'User',
+              user?.photos?.[0] || ''
             );
           } catch (err: any) {
-            setError(err.message || 'Failed to start video call');
+            setError(err.message || t('errorFailedToStartCall'));
           }
         }}
       />
 
-      {/* Error Banner */}
       {error && (
         <div className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm flex items-center justify-between">
           <span>{error}</span>
@@ -481,18 +447,14 @@ export const ChatWindowPage = () => {
         </div>
       )}
 
-
-
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
         {messages.length === 0 && (
           <div className="text-center text-gray-400 dark:text-gray-500 py-8">
-            <p>No messages yet. Say hi!</p>
+            <p>{t('noMessagesYet')}</p>
           </div>
         )}
 
         {messages.map((message) => {
-          // Robust sender ID extraction
           let senderId;
           if (typeof message.senderId === 'string') {
             senderId = message.senderId;
@@ -501,7 +463,6 @@ export const ChatWindowPage = () => {
           }
 
           const isSent = String(senderId) === String(currentUserId);
-
           const senderName = (typeof message.senderId === 'object' && message.senderId)
             ? message.senderId.profile?.name
             : 'User';
@@ -525,7 +486,6 @@ export const ChatWindowPage = () => {
           );
         })}
 
-        {/* Typing Indicator */}
         {isOtherTyping && (
           <div className="flex items-center gap-2 px-3 py-2">
             <div className="flex gap-1">
@@ -533,27 +493,27 @@ export const ChatWindowPage = () => {
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
-            <span className="text-xs text-gray-400">{chatInfo.otherUser.name} is typing...</span>
+            <span className="text-xs text-gray-400">
+              {t('typingIndicator', { name: chatInfo.otherUser.name })}
+            </span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <MessageInput
         onSendMessage={handleSendMessage}
         onSendPhoto={() => setIsPhotoPickerOpen(true)}
         onSendGift={() => setIsGiftSelectorOpen(true)}
         onTypingStart={handleTypingStart}
         onTypingStop={handleTypingStop}
-        placeholder="Type a message..."
+        placeholder={t('typeMessage')}
         coinCost={MESSAGE_COST}
         disabled={coinBalance < MESSAGE_COST || isSending}
         isSending={isSending}
       />
 
-      {/* Modals */}
       <PhotoPickerModal
         isOpen={isPhotoPickerOpen}
         onClose={() => setIsPhotoPickerOpen(false)}
@@ -577,7 +537,6 @@ export const ChatWindowPage = () => {
         coinBalance={coinBalance}
       />
 
-      {/* Insufficient Balance Modal */}
       <InsufficientBalanceModal
         isOpen={isBalanceModalOpen}
         onClose={() => setIsBalanceModalOpen(false)}
@@ -587,8 +546,6 @@ export const ChatWindowPage = () => {
         action={modalAction}
       />
 
-
-      {/* Level Up Modal */}
       <LevelUpModal
         isOpen={!!levelUpInfo}
         onClose={() => setLevelUpInfo(null)}

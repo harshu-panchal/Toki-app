@@ -6,12 +6,12 @@ import { MaleTopNavbar } from '../components/MaleTopNavbar';
 import { MaleSidebar } from '../components/MaleSidebar';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import type { Gift, GiftTransaction } from '../types/male.types';
-
-
+import { useTranslation } from '../../../core/hooks/useTranslation';
 import chatService from '../../../core/services/chat.service';
 import { useGlobalState } from '../../../core/context/GlobalStateContext';
 
 export const GiftsPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { coinBalance } = useGlobalState();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
@@ -79,18 +79,15 @@ export const GiftsPage = () => {
     if (selectedGift && selectedRecipient && !isSending) {
       try {
         setIsSending(true);
-        // Find the chat ID for the selected recipient
         const chat = recipients.find(r => r.id === selectedRecipient);
         if (!chat) return;
 
         await chatService.sendGift(chat.id, [selectedGift], giftMessage);
 
-        // Reset form
         setSelectedGift(null);
         setSelectedRecipient(null);
         setGiftMessage('');
 
-        // Refresh history
         const updatedHistory = await chatService.getGiftHistory();
         setHistory(updatedHistory.map((tx: any) => ({
           id: tx.id,
@@ -102,23 +99,20 @@ export const GiftsPage = () => {
           cost: tx.cost
         })));
 
-        alert('Gift sent successfully!');
+        alert(t('giftSentSuccess'));
       } catch (error) {
         console.error('Failed to send gift:', error);
-        alert('Failed to send gift. Please check your balance.');
+        alert(t('giftSentError'));
       } finally {
         setIsSending(false);
       }
     }
   };
 
-
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-white pb-24 min-h-screen">
-      {/* Top Navbar */}
       <MaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
 
-      {/* Sidebar */}
       <MaleSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -126,7 +120,6 @@ export const GiftsPage = () => {
         onItemClick={handleNavigationClick}
       />
 
-      {/* Header */}
       <header className="sticky top-[57px] z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-black/5 dark:border-white/5">
         <div className="flex items-center justify-between px-4 py-3">
           <button
@@ -136,13 +129,11 @@ export const GiftsPage = () => {
           >
             <MaterialSymbol name="arrow_back" size={24} />
           </button>
-          <h1 className="text-lg font-bold text-slate-900 dark:text-white">Gifts</h1>
-          <div className="size-10" /> {/* Spacer for centering */}
+          <h1 className="text-lg font-bold text-slate-900 dark:text-white">{t('gifts')}</h1>
+          <div className="size-10" />
         </div>
       </header>
 
-
-      {/* Tabs */}
       <div className="flex border-b border-gray-200 dark:border-white/5 mx-4 mt-4">
         <button
           onClick={() => setSelectedTab('send')}
@@ -151,7 +142,7 @@ export const GiftsPage = () => {
             : 'text-gray-500 dark:text-gray-400'
             }`}
         >
-          Send Gift
+          {t('sendGift')}
         </button>
         <button
           onClick={() => setSelectedTab('history')}
@@ -160,39 +151,36 @@ export const GiftsPage = () => {
             : 'text-gray-500 dark:text-gray-400'
             }`}
         >
-          Gift History
+          {t('giftHistory')}
         </button>
       </div>
 
-      {/* Content */}
       <div className="p-4">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-gray-500">Loading gift data...</p>
+            <p className="text-gray-500">{t('loadingGiftData')}</p>
           </div>
         ) : selectedTab === 'send' ? (
           <div className="space-y-6">
-            {/* Coin Balance */}
-            <div className="bg-white dark:bg-[#342d18] rounded-xl p-4 shadow-sm">
+            <div className="bg-white dark:bg-[#342d18] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-white/5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MaterialSymbol name="monetization_on" className="text-primary" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Coin Balance</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('coinBalance')}</span>
                 </div>
-                <span className="text-lg font-bold text-slate-900 dark:text-white">{coinBalance} coins</span>
+                <span className="text-lg font-bold text-slate-900 dark:text-white">{coinBalance} {t('coins')}</span>
               </div>
             </div>
 
-            {/* Select Recipient */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Select Recipient</h3>
-              <div className="grid grid-cols-3 gap-3">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('selectRecipient')}</h3>
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                 {recipients.map((recipient) => (
                   <button
                     key={recipient.id}
                     onClick={() => setSelectedRecipient(recipient.id)}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${selectedRecipient === recipient.id
+                    className={`flex flex-col items-center gap-2 p-3 min-w-[100px] rounded-xl border-2 transition-all ${selectedRecipient === recipient.id
                       ? 'border-primary bg-primary/10'
                       : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#342d18]'
                       }`}
@@ -206,13 +194,12 @@ export const GiftsPage = () => {
                 onClick={() => navigate('/male/discover')}
                 className="mt-3 w-full py-2 text-sm text-primary font-medium hover:bg-primary/10 rounded-lg transition-colors"
               >
-                + Browse More Profiles
+                {t('browseMoreProfiles')}
               </button>
             </div>
 
-            {/* Select Gift */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Select Gift</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('selectGift')}</h3>
               <div className="grid grid-cols-2 gap-3">
                 {gifts.map((gift) => (
                   <button
@@ -234,13 +221,10 @@ export const GiftsPage = () => {
                         />
                       )}
                       <span className="text-sm font-medium text-slate-900 dark:text-white">{gift.name}</span>
-                      {gift.description && (
-                        <span className="text-xs text-gray-600 dark:text-gray-400 text-center">{gift.description}</span>
-                      )}
                       <div className="flex items-center gap-1 mt-1">
                         <MaterialSymbol name="monetization_on" size={16} className="text-primary" />
                         <span className="text-xs font-medium text-slate-900 dark:text-white">
-                          {gift.cost} coins
+                          {gift.cost} {t('coins')}
                         </span>
                       </div>
                     </div>
@@ -249,14 +233,13 @@ export const GiftsPage = () => {
               </div>
             </div>
 
-            {/* Gift Message */}
             {selectedGift && selectedRecipient && (
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Add Message (Optional)</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('addMessageOptional')}</h3>
                 <textarea
                   value={giftMessage}
                   onChange={(e) => setGiftMessage(e.target.value)}
-                  placeholder="Write a message to go with your gift..."
+                  placeholder={t('giftMessagePlaceholder')}
                   rows={3}
                   className="w-full px-4 py-3 bg-white dark:bg-[#342d18] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                   maxLength={200}
@@ -265,12 +248,11 @@ export const GiftsPage = () => {
               </div>
             )}
 
-            {/* Send Button */}
             {selectedGift && selectedRecipient && (
               <button
                 onClick={handleSendGift}
                 disabled={isSending}
-                className={`w-full py-4 bg-gradient-to-r from-pink-500 to-pink-600 text-white font-bold rounded-xl transform transition-all duration-200 shadow-lg ${isSending ? 'opacity-70 cursor-not-allowed' : 'hover:from-pink-600 hover:to-pink-700 hover:scale-105'}`}
+                className={`w-full py-4 bg-gradient-to-r from-pink-500 to-pink-600 text-white font-bold rounded-xl transform transition-all duration-200 shadow-lg ${isSending ? 'opacity-70 cursor-not-allowed' : 'hover:from-pink-600 hover:to-pink-700 active:scale-95'}`}
               >
                 <div className="flex items-center justify-center gap-2">
                   {isSending ? (
@@ -278,7 +260,7 @@ export const GiftsPage = () => {
                   ) : (
                     <MaterialSymbol name="send" />
                   )}
-                  <span>{isSending ? 'Sending...' : 'Send Gift'}</span>
+                  <span>{isSending ? t('sending') : t('sendGift')}</span>
                 </div>
               </button>
             )}
@@ -288,19 +270,19 @@ export const GiftsPage = () => {
             {history.length === 0 ? (
               <div className="text-center py-12">
                 <MaterialSymbol name="redeem" size={64} className="text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">No gifts sent yet</p>
+                <p className="text-gray-500 dark:text-gray-400">{t('noGiftsSentYet')}</p>
                 <button
                   onClick={() => setSelectedTab('send')}
-                  className="mt-4 px-6 py-2 bg-primary text-slate-900 font-semibold rounded-xl hover:bg-primary/90 transition-colors"
+                  className="mt-4 px-6 py-2 bg-primary text-[#231d10] font-bold rounded-xl hover:bg-primary/90 transition-colors"
                 >
-                  Send Your First Gift
+                  {t('sendFirstGift')}
                 </button>
               </div>
             ) : (
               history.map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="bg-white dark:bg-[#342d18] rounded-xl p-4 shadow-sm"
+                  className="bg-white dark:bg-[#342d18] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-white/5"
                 >
                   <div className="flex items-start gap-3">
                     <img
@@ -312,14 +294,14 @@ export const GiftsPage = () => {
                       <div className="flex items-start justify-between mb-1">
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-slate-900 dark:text-white truncate">
-                            Sent {transaction.giftName} to {transaction.recipientName}
+                            {t('sentGiftTo', { gift: transaction.giftName, name: transaction.recipientName })}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">{transaction.sentAt}</p>
                         </div>
                         <div className="flex items-center gap-1 ml-2 shrink-0">
                           <MaterialSymbol name="monetization_on" size={16} className="text-primary" />
                           <span className="text-sm font-medium text-slate-900 dark:text-white">
-                            {transaction.cost} coins
+                            {transaction.cost}
                           </span>
                         </div>
                       </div>
@@ -332,7 +314,6 @@ export const GiftsPage = () => {
         )}
       </div>
 
-      {/* Bottom Navigation Bar */}
       <BottomNavigation items={navigationItems} onItemClick={handleNavigationClick} />
     </div>
   );

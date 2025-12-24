@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../core/context/AuthContext';
@@ -9,10 +8,10 @@ import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { GoogleMapsAutocomplete } from '../../../shared/components/GoogleMapsAutocomplete';
 import axios from 'axios';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Mock data - replace with actual API calls
 const mockProfile = {
   id: 'me',
   name: 'John Doe',
@@ -33,6 +32,7 @@ const mockProfile = {
 };
 
 export const MaleProfileEditPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
@@ -41,8 +41,8 @@ export const MaleProfileEditPage = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  const [profile, setProfile] = useState(mockProfile);
-  const [editedProfile, setEditedProfile] = useState(mockProfile);
+
+  const [editedProfile, setEditedProfile] = useState<any>(mockProfile);
 
   useEffect(() => {
     if (user) {
@@ -58,7 +58,6 @@ export const MaleProfileEditPage = () => {
         avatar: user.avatarUrl || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y',
         photos: (user.photos && user.photos.length > 0) ? user.photos : (user.avatarUrl ? [user.avatarUrl] : []),
       };
-      setProfile(userProfile);
       setEditedProfile(userProfile);
     }
   }, [user]);
@@ -75,7 +74,6 @@ export const MaleProfileEditPage = () => {
         photos: editedProfile.photos,
       };
 
-      // Add coordinates if available
       if (editedProfile.latitude && editedProfile.longitude) {
         payload.latitude = editedProfile.latitude;
         payload.longitude = editedProfile.longitude;
@@ -100,7 +98,7 @@ export const MaleProfileEditPage = () => {
       navigate('/male/my-profile');
     } catch (error) {
       console.error('Failed to update profile', error);
-      alert('Failed to update profile');
+      alert(t('failedToUpdateProfile'));
     }
   };
 
@@ -137,10 +135,10 @@ export const MaleProfileEditPage = () => {
         reader.onload = (event) => {
           const result = event.target?.result as string;
           if (result) {
-            setEditedProfile({
-              ...editedProfile,
-              photos: [...editedProfile.photos || [], result],
-            });
+            setEditedProfile((prev: any) => ({
+              ...prev,
+              photos: [...prev.photos || [], result],
+            }));
           }
         };
         reader.readAsDataURL(file);
@@ -153,7 +151,7 @@ export const MaleProfileEditPage = () => {
   };
 
   const handleDeletePhoto = (index: number) => {
-    const newPhotos = editedProfile.photos?.filter((_, i) => i !== index) || [];
+    const newPhotos = editedProfile.photos?.filter((_: any, i: number) => i !== index) || [];
     setEditedProfile({ ...editedProfile, photos: newPhotos });
   };
 
@@ -166,10 +164,8 @@ export const MaleProfileEditPage = () => {
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased selection:bg-primary selection:text-white pb-24 min-h-screen">
-      {/* Top Navbar */}
       <MaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
 
-      {/* Sidebar */}
       <MaleSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -177,9 +173,7 @@ export const MaleProfileEditPage = () => {
         onItemClick={handleNavigationClick}
       />
 
-      {/* Profile Content */}
       <main className="p-4 space-y-6">
-        {/* Profile Photo */}
         <div className="flex flex-col items-center">
           <div className="relative">
             <img
@@ -199,12 +193,10 @@ export const MaleProfileEditPage = () => {
           </div>
         </div>
 
-        {/* Profile Info */}
         <div className="bg-white dark:bg-[#342d18] rounded-2xl p-4 shadow-sm space-y-4">
-          {/* Name and Age */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-              Name
+              {t('name')}
             </label>
             <input
               type="text"
@@ -216,10 +208,9 @@ export const MaleProfileEditPage = () => {
             />
           </div>
 
-          {/* Age */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-              Age
+              {t('age')}
             </label>
             <input
               type="number"
@@ -233,10 +224,9 @@ export const MaleProfileEditPage = () => {
             />
           </div>
 
-          {/* Occupation */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-              Occupation
+              {t('occupation')}
             </label>
             <input
               type="text"
@@ -245,14 +235,13 @@ export const MaleProfileEditPage = () => {
                 setEditedProfile({ ...editedProfile, occupation: e.target.value })
               }
               className="w-full px-3 py-2 bg-gray-50 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Enter your occupation"
+              placeholder={t('occupationPlaceholder')}
             />
           </div>
 
-          {/* City */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-              City
+              {t('city')}
             </label>
             <GoogleMapsAutocomplete
               value={editedProfile.city || ''}
@@ -265,14 +254,13 @@ export const MaleProfileEditPage = () => {
                 setEditedProfile(updates);
               }}
               className="w-full px-3 py-2 bg-gray-50 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Enter your city"
+              placeholder={t('cityPlaceholder')}
             />
           </div>
 
-          {/* Bio */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-              Bio
+              {t('bio')}
             </label>
             <textarea
               value={editedProfile.bio || ''}
@@ -282,17 +270,16 @@ export const MaleProfileEditPage = () => {
               rows={4}
               maxLength={500}
               className="w-full px-3 py-2 bg-gray-50 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-              placeholder="Tell us about yourself..."
+              placeholder={t('bioPlaceholder')}
             />
           </div>
 
-          {/* Interests */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
-              Interests (Max 10)
+              {t('interestsMax')}
             </label>
             <div className="flex flex-wrap gap-2">
-              {(editedProfile.interests || []).map((interest, index) => (
+              {(editedProfile.interests || []).map((interest: string, index: number) => (
                 <div key={index} className="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-[#2f151e] border border-gray-200 dark:border-gray-700 rounded-full">
                   <input
                     type="text"
@@ -303,12 +290,12 @@ export const MaleProfileEditPage = () => {
                       setEditedProfile({ ...editedProfile, interests: newInterests });
                     }}
                     className="bg-transparent border-none outline-none text-sm w-24 text-slate-900 dark:text-white placeholder-gray-400"
-                    placeholder="Interest"
+                    placeholder={t('interestPlaceholder')}
                     autoFocus={interest === ''}
                   />
                   <button
                     onClick={() => {
-                      const newInterests = (editedProfile.interests || []).filter((_, i) => i !== index);
+                      const newInterests = (editedProfile.interests || []).filter((_: any, i: number) => i !== index);
                       setEditedProfile({ ...editedProfile, interests: newInterests });
                     }}
                     className="text-gray-400 hover:text-red-500 transition-colors flex items-center"
@@ -325,18 +312,17 @@ export const MaleProfileEditPage = () => {
                   className="px-3 py-1 border border-dashed border-gray-300 dark:border-gray-600 rounded-full text-sm text-gray-500 hover:text-primary hover:border-primary transition-colors flex items-center gap-1"
                 >
                   <MaterialSymbol name="add" size={16} />
-                  Add
+                  {t('add')}
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Photo Gallery (Edit Mode) */}
         <div className="bg-white dark:bg-[#342d18] rounded-2xl p-4 shadow-sm">
-          <h3 className="font-semibold mb-3">Photo Gallery (Max 6)</h3>
+          <h3 className="font-semibold mb-3">{t('photoGallery')} {t('maxPhotos')}</h3>
           <div className="grid grid-cols-3 gap-2 mb-3">
-            {(editedProfile.photos || [editedProfile.avatar]).map((photo, index) => (
+            {(editedProfile.photos || [editedProfile.avatar]).map((photo: string, index: number) => (
               <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
                 <img
                   src={photo}
@@ -348,7 +334,7 @@ export const MaleProfileEditPage = () => {
                     <button
                       onClick={() => handleSetProfilePhoto(index)}
                       className="p-1 bg-white/20 rounded backdrop-blur-sm hover:bg-white/30"
-                      title="Set as profile photo"
+                      title={t('setAsProfilePhoto')}
                     >
                       <MaterialSymbol name="star" size={16} className="text-white" />
                     </button>
@@ -356,14 +342,14 @@ export const MaleProfileEditPage = () => {
                   <button
                     onClick={() => handleDeletePhoto(index)}
                     className="p-1 bg-red-500/80 rounded backdrop-blur-sm hover:bg-red-500"
-                    title="Delete photo"
+                    title={t('delete')}
                   >
                     <MaterialSymbol name="delete" size={16} className="text-white" />
                   </button>
                 </div>
                 {index === 0 && (
                   <div className="absolute top-1 left-1 bg-primary text-slate-900 text-xs px-1 rounded font-bold">
-                    Main
+                    {t('mainPhoto')}
                   </div>
                 )}
               </div>
@@ -387,24 +373,22 @@ export const MaleProfileEditPage = () => {
           />
         </div>
 
-        {/* Action Buttons */}
         <div className="flex gap-3">
           <button
             onClick={handleCancel}
             className="flex-1 h-12 bg-gray-100 dark:bg-[#2f151e] text-slate-700 dark:text-white font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-[#342d18] transition-colors active:scale-95"
           >
-            Cancel
+            {t('cancel')}
           </button>
           <button
             onClick={handleSave}
             className="flex-1 h-12 bg-primary text-[#231d10] font-semibold rounded-xl hover:bg-primary/90 transition-colors active:scale-95"
           >
-            Save Changes
+            {t('saveChanges')}
           </button>
         </div>
       </main>
 
-      {/* Bottom Navigation Bar */}
       <BottomNavigation items={navigationItems} onItemClick={handleNavigationClick} />
     </div>
   );

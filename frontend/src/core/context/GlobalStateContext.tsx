@@ -20,6 +20,20 @@ interface GlobalState {
     updateBalance: (balance: number) => void;
     refreshBalance: () => Promise<void>;
     logout: () => void;
+    addNotification: (notification: InAppNotification) => void;
+    clearNotification: (id: string) => void;
+    notifications: InAppNotification[];
+    chatCache: Record<string, any[]>;
+    saveToChatCache: (chatId: string, messages: any[]) => void;
+}
+
+export interface InAppNotification {
+    id: string;
+    title: string;
+    message: string;
+    type: 'message' | 'system' | 'gift';
+    chatId?: string;
+    userId?: string;
 }
 
 const GlobalStateContext = createContext<GlobalState | undefined>(undefined);
@@ -29,6 +43,7 @@ const STORAGE_KEYS = {
     USER: 'matchmint_user',
     TOKEN: 'matchmint_auth_token',
     BALANCE_CACHE: 'matchmint_balance_cache',
+    CHAT_CACHE: 'matchmint_chat_cache',
 };
 
 interface GlobalStateProviderProps {
@@ -49,6 +64,37 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
     });
 
     const [isConnected, setIsConnected] = useState(false);
+    const [notifications, setNotifications] = useState<InAppNotification[]>([]);
+    const [chatCache, setChatCache] = useState<Record<string, any[]>>(() => {
+        try {
+            const cached = localStorage.getItem(STORAGE_KEYS.CHAT_CACHE);
+            return cached ? JSON.parse(cached) : {};
+        } catch {
+            return {};
+        }
+    });
+
+    const addNotification = useCallback((notification: Omit<InAppNotification, 'id'>) => {
+        const id = Math.random().toString(36).substr(2, 9);
+        setNotifications(prev => [...prev, { ...notification, id }]);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        }, 5000);
+    }, []);
+
+    const clearNotification = useCallback((id: string) => {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+    }, []);
+
+    const saveToChatCache = useCallback((chatId: string, messages: any[]) => {
+        setChatCache(prev => {
+            const updated = { ...prev, [chatId]: messages.slice(-50) }; // Keep last 50 messages
+            localStorage.setItem(STORAGE_KEYS.CHAT_CACHE, JSON.stringify(updated));
+            return updated;
+        });
+    }, []);
 
     // Update user and persist to localStorage
     // setUser mapping
@@ -109,11 +155,27 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
             }
         };
 
+        // Handle chat messages
+        const handleNewMessage = (data: any) => {
+            // Only show notification if we are not on the chat page for this chatId
+            // Note: Window location check is a simple fallback since we don't have access to router state here easily
+            if (!window.location.pathname.includes(`/chat/${data.chatId || data._id}`)) {
+                addNotification({
+                    title: data.senderName || 'New Message',
+                    message: data.content || data.message || 'You received a new message',
+                    type: 'message',
+                    chatId: data.chatId || data._id
+                });
+            }
+        };
+
         // Register listeners
         socketService.on('connect', handleConnect);
         socketService.on('disconnect', handleDisconnect);
         socketService.on('balance:update', handleBalanceUpdate);
         socketService.on('user:update', handleUserUpdate);
+        socketService.on('message', handleNewMessage);
+        socketService.on('chat:message', handleNewMessage);
 
         // Initial balance fetch
         refreshBalance();
@@ -123,6 +185,8 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
             socketService.off('disconnect', handleDisconnect);
             socketService.off('balance:update', handleBalanceUpdate);
             socketService.off('user:update', handleUserUpdate);
+            socketService.off('message', handleNewMessage);
+            socketService.off('chat:message', handleNewMessage);
         };
     }, [user?.id, updateBalance, refreshBalance, updateUser]);
 
@@ -134,6 +198,11 @@ export const GlobalStateProvider = ({ children }: GlobalStateProviderProps) => {
         updateBalance,
         refreshBalance,
         logout: logoutAction,
+        notifications,
+        addNotification,
+        clearNotification,
+        chatCache,
+        saveToChatCache,
     };
 
     return (

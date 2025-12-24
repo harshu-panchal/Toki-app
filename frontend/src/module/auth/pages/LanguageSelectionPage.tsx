@@ -3,17 +3,47 @@
  * First screen for new users to choose their language
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../../core/hooks/useTranslation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
+import { useAuth } from '../../../core/context/AuthContext';
+import { isLanguageSelected } from '../../../core/utils/auth';
 
 type Language = 'en' | 'hi';
 
 export const LanguageSelectionPage = () => {
     const navigate = useNavigate();
+    const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
     const { changeLanguage, currentLanguage } = useTranslation();
     const [selectedLanguage, setSelectedLanguage] = useState<Language>(currentLanguage);
+
+    useEffect(() => {
+        if (isAuthLoading) return;
+
+        if (isLanguageSelected()) {
+            if (isAuthenticated && user) {
+                // Navigate to dashboard based on role
+                if (user.role === 'female') {
+                    navigate('/female/dashboard');
+                } else if (user.role === 'admin') {
+                    navigate('/admin/dashboard');
+                } else {
+                    navigate('/male/discover');
+                }
+            } else {
+                navigate('/login');
+            }
+        }
+    }, [isAuthLoading, isAuthenticated, user, navigate]);
+
+    if (isAuthLoading) {
+        return (
+            <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+            </div>
+        );
+    }
 
     const languages = [
         {

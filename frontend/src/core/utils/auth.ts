@@ -8,12 +8,26 @@ import { UserProfile } from '../types/global';
 const TOKEN_KEY = 'matchmint_auth_token';
 const REFRESH_TOKEN_KEY = 'matchmint_refresh_token';
 const USER_KEY = 'matchmint_user';
+const AUTH_TIMESTAMP_KEY = 'matchmint_auth_timestamp';
+const LANGUAGE_KEY = 'user_language';
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Get auth token from localStorage
  */
 export const getAuthToken = (): string | null => {
-  return localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY);
+  const timestamp = localStorage.getItem(AUTH_TIMESTAMP_KEY);
+
+  if (token && timestamp) {
+    const loginTime = parseInt(timestamp, 10);
+    const now = Date.now();
+    if (now - loginTime > THIRTY_DAYS_MS) {
+      clearAuth();
+      return null;
+    }
+  }
+  return token;
 };
 
 /**
@@ -21,6 +35,7 @@ export const getAuthToken = (): string | null => {
  */
 export const setAuthToken = (token: string): void => {
   localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(AUTH_TIMESTAMP_KEY, Date.now().toString());
 };
 
 /**
@@ -74,15 +89,25 @@ export const isAuthenticated = (): boolean => {
  */
 export const clearAuth = (): void => {
   // Save language preference
-  const savedLanguage = localStorage.getItem('user_language');
+  const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
 
-  // Clear EVERYTHING
-  localStorage.clear();
+  // Clear MatchMint related data
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(AUTH_TIMESTAMP_KEY);
 
-  // Restore language preference
+  // Restore language preference if needed (though we didn't remove it specifically above)
   if (savedLanguage) {
-    localStorage.setItem('user_language', savedLanguage);
+    localStorage.setItem(LANGUAGE_KEY, savedLanguage);
   }
+};
+
+/**
+ * Check if language preference is stored
+ */
+export const isLanguageSelected = (): boolean => {
+  return !!localStorage.getItem(LANGUAGE_KEY);
 };
 
 import axios from 'axios';

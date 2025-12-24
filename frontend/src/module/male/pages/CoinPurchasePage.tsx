@@ -15,8 +15,10 @@ import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import walletService from '../../../core/services/wallet.service';
 import paymentService from '../../../core/services/payment.service';
 import type { CoinPlan as WalletCoinPlan } from '../../../core/types/wallet.types';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 export const CoinPurchasePage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const { updateBalance } = useGlobalState();
@@ -49,7 +51,7 @@ export const CoinPurchasePage = () => {
       setBalance(balanceData.balance || 0);
     } catch (err: any) {
       console.error('Failed to fetch data:', err);
-      setError('Failed to load coin plans. Please try again.');
+      setError(t('errorLoadPlans'));
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +95,7 @@ export const CoinPurchasePage = () => {
         }
       }
     } catch (err: any) {
-      setError('Payment failed. Please try again.');
+      setError(t('errorPaymentFailed'));
     } finally {
       setIsPurchasing(false);
     }
@@ -104,7 +106,7 @@ export const CoinPurchasePage = () => {
     const bonusPercent = plan.bonusPercentage;
     let bonus = '';
     if (bonusPercent > 0) {
-      bonus = `+${Math.round(bonusPercent)}% Bonus`;
+      bonus = t('bonusText', { percent: Math.round(bonusPercent) });
     }
 
     return {
@@ -156,16 +158,16 @@ export const CoinPurchasePage = () => {
 
         {/* Promo Banner */}
         <PromoBanner
-          title="Get 50% extra on your first purchase!"
-          badge="Limited Offer"
+          title={t('promoTitle')}
+          badge={t('limitedOffer')}
         />
 
         {/* Pricing Cards Section */}
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold">Select Plan</h3>
+            <h3 className="text-lg font-bold">{t('selectPlan')}</h3>
             <span className="text-xs font-medium text-slate-500 dark:text-white/50">
-              Prices in INR
+              {t('pricesInInr')}
             </span>
           </div>
 
@@ -198,12 +200,12 @@ export const CoinPurchasePage = () => {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <MaterialSymbol name="monetization_on" size={48} className="mx-auto mb-2 opacity-50" />
-              <p>No coin plans available at the moment.</p>
+              <p>{t('noPlansAvailable')}</p>
               <button
                 onClick={fetchData}
                 className="mt-2 text-primary font-medium hover:underline"
               >
-                Retry
+                {t('retry')}
               </button>
             </div>
           )}
@@ -218,7 +220,7 @@ export const CoinPurchasePage = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 flex flex-col items-center gap-3 shadow-xl">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-medium">Processing payment...</p>
+            <p className="text-sm font-medium">{t('processingPayment')}</p>
           </div>
         </div>
       )}

@@ -1,4 +1,5 @@
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 interface HiSentModalProps {
     isOpen: boolean;
@@ -13,6 +14,8 @@ export const HiSentModal = ({
     onGoToChat,
     recipientName,
 }: HiSentModalProps) => {
+    const { t } = useTranslation();
+
     if (!isOpen) return null;
 
     return (
@@ -36,13 +39,12 @@ export const HiSentModal = ({
 
                     {/* Title */}
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-2">
-                        Hi Sent! 👋
+                        {t('hiSentTitle')}
                     </h2>
 
                     {/* Message */}
                     <p className="text-sm text-gray-600 dark:text-gray-300 text-center mb-6">
-                        Your Hi message has been sent to{' '}
-                        <span className="font-bold text-primary">{recipientName}</span>
+                        {t('hiSentMessage', { name: recipientName })}
                     </p>
 
                     {/* Buttons */}
@@ -52,13 +54,13 @@ export const HiSentModal = ({
                             className="w-full px-4 py-3 bg-primary text-slate-900 font-bold rounded-lg hover:bg-yellow-400 transition-colors shadow-lg flex items-center justify-center gap-2"
                         >
                             <MaterialSymbol name="chat" size={20} />
-                            Go to Chat
+                            {t('goToChat')}
                         </button>
                         <button
                             onClick={onClose}
                             className="w-full px-4 py-3 bg-gray-200 dark:bg-[#4a212f] text-gray-700 dark:text-white font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-[#5e2a3c] transition-colors"
                         >
-                            Close
+                            {t('close')}
                         </button>
                     </div>
                 </div>

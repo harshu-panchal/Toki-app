@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { MaterialSymbol } from '../types/material-symbol';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 interface Chat {
   id: string;
@@ -18,7 +17,7 @@ interface ActiveChatsListProps {
   onSeeAllClick?: () => void;
 }
 
-const ChatItem = ({ chat, onClick }: { chat: Chat; onClick?: () => void }) => {
+const ChatItem = ({ chat, onClick, sayHiPlaceholder }: { chat: Chat; onClick?: () => void; sayHiPlaceholder: string }) => {
   return (
     <button
       onClick={onClick}
@@ -45,7 +44,7 @@ const ChatItem = ({ chat, onClick }: { chat: Chat; onClick?: () => void }) => {
         </div>
         <div className="flex items-center gap-1">
           <p className="text-slate-600 dark:text-slate-300 text-sm font-normal leading-normal line-clamp-1 flex-1 min-w-0">
-            {chat.lastMessage}
+            {chat.lastMessage === 'Say hi!' ? sayHiPlaceholder : chat.lastMessage}
           </p>
           {chat.hasUnread && (
             <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 shrink-0 ml-auto shadow-md ring-1 ring-pink-200/50 dark:ring-pink-900/30" />
@@ -57,23 +56,26 @@ const ChatItem = ({ chat, onClick }: { chat: Chat; onClick?: () => void }) => {
 };
 
 export const ActiveChatsList = ({ chats, onChatClick, onSeeAllClick }: ActiveChatsListProps) => {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col w-full">
       <div className="flex items-center justify-between px-4 pb-3 pt-2">
         <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <span className="text-pink-500">💬</span> Active Chats
+          <span className="text-pink-500">💬</span> {t('activeConversations')}
         </h2>
         <button
           onClick={onSeeAllClick}
           className="text-sm font-semibold text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 transition-colors"
         >
-          See All
+          {t('seeAll')}
         </button>
       </div>
       {chats.map((chat) => (
         <ChatItem
           key={chat.id}
           chat={chat}
+          sayHiPlaceholder={t('sayHiPlaceholder')}
           onClick={() => onChatClick?.(chat.id)}
         />
       ))}

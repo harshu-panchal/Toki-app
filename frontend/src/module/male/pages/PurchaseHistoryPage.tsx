@@ -9,38 +9,42 @@ import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import walletService from '../../../core/services/wallet.service';
 import type { Transaction } from '../types/male.types';
-
-const filterOptions = [
-  { id: 'all', label: 'All' },
-  { id: 'recent', label: 'Recent' },
-  { id: 'this_month', label: 'This Month' },
-];
-
-// Helper to format timestamp
-const formatTransactionTime = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return `Today, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-  } else if (diffDays === 1) {
-    return `Yesterday, ${date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
-  } else if (diffDays < 7) {
-    return `${diffDays} days ago`;
-  } else {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-};
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 export const PurchaseHistoryPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
 
   const [purchaseHistory, setPurchaseHistory] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState('all');
+
+  const filterOptions = useMemo(() => [
+    { id: 'all', label: t('filterAll') },
+    { id: 'recent', label: t('filterRecent') },
+    { id: 'this_month', label: t('filterThisMonth') },
+  ], [t]);
+
+  // Helper to format timestamp
+  const formatTransactionTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+
+    if (diffDays === 0) {
+      return `${t('today')}, ${timeStr}`;
+    } else if (diffDays === 1) {
+      return `${t('yesterday')}, ${timeStr}`;
+    } else if (diffDays < 7) {
+      return t('daysAgo', { count: diffDays });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -50,23 +54,20 @@ export const PurchaseHistoryPage = () => {
   const fetchPurchaseHistory = async () => {
     try {
       setIsLoading(true);
-      // Fetch only purchase type transactions
       const data = await walletService.getMyTransactions({ type: 'purchase', limit: 20 });
 
-      // Transform backend transactions to frontend format
-      const formattedTransactions: Transaction[] = (data.transactions || []).map((t: any) => {
-        // Get plan name from coinPlanId if populated
-        const planName = t.coinPlanId?.name || t.coinPlanId?.tier || '';
+      const formattedTransactions: Transaction[] = (data.transactions || []).map((tData: any) => {
+        const planName = tData.coinPlanId?.name || tData.coinPlanId?.tier || '';
         const title = planName
-          ? `Purchase of ${t.amountCoins || 0} coins (${planName})`
-          : t.description || `${t.amountCoins || 0} Coins Purchased`;
+          ? t('purchaseOf', { count: tData.amountCoins || 0, plan: planName })
+          : t('coinsPurchased');
 
         return {
-          id: t._id,
+          id: tData._id,
           type: 'purchase',
           title,
-          timestamp: formatTransactionTime(t.createdAt),
-          amount: t.amountCoins || 0, // Backend uses amountCoins, not amount
+          timestamp: formatTransactionTime(tData.createdAt),
+          amount: tData.amountCoins || 0,
           isPositive: true,
         };
       });
@@ -84,11 +85,9 @@ export const PurchaseHistoryPage = () => {
 
     switch (selectedFilter) {
       case 'recent':
-        // Show last 3
         filtered = filtered.slice(0, 3);
         break;
       case 'this_month':
-        // Show this month (limit to 10)
         filtered = filtered.slice(0, 10);
         break;
       default:
@@ -100,10 +99,8 @@ export const PurchaseHistoryPage = () => {
 
   return (
     <div className="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased selection:bg-primary selection:text-white pb-24 min-h-screen">
-      {/* Top Navbar */}
       <MaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
 
-      {/* Sidebar */}
       <MaleSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -111,19 +108,16 @@ export const PurchaseHistoryPage = () => {
         onItemClick={handleNavigationClick}
       />
 
-      {/* Top App Bar */}
       <CoinPurchaseHeader onHistoryClick={() => navigate('/male/buy-coins')} />
 
       <div className="max-w-md mx-auto w-full flex flex-col p-4">
-        {/* Header */}
         <div className="mb-4">
-          <h1 className="text-2xl font-bold mb-2">Purchase History</h1>
+          <h1 className="text-2xl font-bold mb-2">{t('purchaseHistoryTitle')}</h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            View all your coin purchase transactions
+            {t('viewPurchaseHistory')}
           </p>
         </div>
 
-        {/* Segmented Controls */}
         <div className="mb-4">
           <SegmentedControls
             options={filterOptions}
@@ -132,7 +126,6 @@ export const PurchaseHistoryPage = () => {
           />
         </div>
 
-        {/* Transaction List */}
         <div className="flex flex-col gap-2">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -158,13 +151,13 @@ export const PurchaseHistoryPage = () => {
                 className="text-gray-400 dark:text-gray-600 mb-4"
               />
               <p className="text-gray-500 dark:text-[#cc8ea3] text-center">
-                No purchase history found
+                {t('noPurchaseHistory')}
               </p>
               <button
                 onClick={() => navigate('/male/buy-coins')}
-                className="mt-4 px-6 py-2 bg-primary text-black font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+                className="mt-4 px-6 py-2 bg-primary text-[#231d10] font-bold rounded-xl shadow-lg shadow-primary/20 active:scale-95 transition-all"
               >
-                Buy Coins
+                {t('buyCoins')}
               </button>
             </div>
           )}

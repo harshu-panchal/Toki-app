@@ -5,6 +5,7 @@ import { GlobalStateProvider } from './core/context/GlobalStateContext';
 import { VideoCallProvider } from './core/context/VideoCallContext';
 import './core/i18n/i18n.config'; // Initialize i18next
 import { VideoCallModal } from './shared/components/VideoCallModal';
+import { InAppNotificationToast } from './shared/components/InAppNotificationToast';
 import { MaleDashboard } from './module/male/pages/MaleDashboard';
 import { NearbyFemalesPage } from './module/male/pages/NearbyFemalesPage';
 import { ChatListPage as MaleChatListPage } from './module/male/pages/ChatListPage';
@@ -141,8 +142,9 @@ function App() {
                 {/* Catch-all route for 404 */}
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
-              {/* Video Call Modal - renders over everything */}
+              {/* Global Overlays */}
               <VideoCallModal />
+              <InAppNotificationToast />
             </BrowserRouter>
           </VideoCallProvider>
         </GlobalStateProvider>

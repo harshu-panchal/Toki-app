@@ -1,17 +1,10 @@
-import axios from 'axios';
+import apiClient from '../../../core/api/client';
 import type { FemaleApproval } from '../types/admin.types';
-import { getAuthToken } from '../../../core/utils/auth';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const getAuthHeader = (token?: string) => ({
-    headers: {
-        Authorization: `Bearer ${token || getAuthToken()}`
-    }
-});
-
-export const getPendingFemales = async (status = 'pending', page = 1, limit = 20, token?: string): Promise<{ users: FemaleApproval[], total: number, stats: any }> => {
-    const response = await axios.get(`${API_URL}/admin/females/pending?status=${status}&page=${page}&limit=${limit}`, getAuthHeader(token));
+export const getPendingFemales = async (status = 'pending', page = 1, limit = 20): Promise<{ users: FemaleApproval[], total: number, stats: any }> => {
+    const response = await apiClient.get('/admin/females/pending', {
+        params: { status, page, limit }
+    });
 
     // Transform backend user format to FemaleApproval format
     const users = response.data.data.users.map((u: any) => ({
@@ -24,7 +17,7 @@ export const getPendingFemales = async (status = 'pending', page = 1, limit = 20
             isBlocked: u.isBlocked,
             isVerified: u.isVerified,
             createdAt: u.createdAt,
-            lastLoginAt: u.lastSeen // Using lastSeen as lastLoginAt for now
+            lastLoginAt: u.lastSeen
         },
         profile: {
             age: u.profile.age,
@@ -45,16 +38,16 @@ export const getPendingFemales = async (status = 'pending', page = 1, limit = 20
 };
 
 export const approveFemale = async (userId: string) => {
-    const response = await axios.patch(`${API_URL}/admin/females/${userId}/approve`, {}, getAuthHeader());
+    const response = await apiClient.patch(`/admin/females/${userId}/approve`);
     return response.data;
 };
 
 export const rejectFemale = async (userId: string, reason: string) => {
-    const response = await axios.patch(`${API_URL}/admin/females/${userId}/reject`, { reason }, getAuthHeader());
+    const response = await apiClient.patch(`/admin/females/${userId}/reject`, { reason });
     return response.data;
 };
 
 export const requestResubmit = async (userId: string, reason: string) => {
-    const response = await axios.patch(`${API_URL}/admin/females/${userId}/request-resubmit`, { reason }, getAuthHeader());
+    const response = await apiClient.patch(`/admin/females/${userId}/request-resubmit`, { reason });
     return response.data;
 };

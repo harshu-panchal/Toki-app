@@ -27,8 +27,8 @@ export const ChatListPage = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     // Get current user ID from token or context
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    setCurrentUserId(user._id || '');
+    const user = JSON.parse(localStorage.getItem('matchmint_user') || '{}');
+    setCurrentUserId(user.id || user._id || '');
     fetchChats();
     fetchAvailableBalance();
 
@@ -64,9 +64,12 @@ export const ChatListPage = () => {
 
   const fetchAvailableBalance = async () => {
     try {
-      const response = await fetch('/api/users/female/dashboard', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('matchmint_auth_token');
+
+      const response = await fetch(`${API_URL}/users/female/dashboard`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       const data = await response.json();

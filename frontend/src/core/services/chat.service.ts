@@ -1,150 +1,62 @@
-/**
- * Chat Service - Frontend API Client for Chat Operations
- * @purpose: Handle API calls for chats, messages, and real-time messaging
- */
-
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-// Helper to get auth headers
-const getAuthHeaders = () => {
-    const token = localStorage.getItem('matchmint_auth_token');
-    return {
-        Authorization: `Bearer ${token}`,
-    };
-};
+import apiClient from '../api/client';
 
 // ========================
 // CHAT LIST & MANAGEMENT
 // ========================
 
-/**
- * Get user's chat list
- */
 export const getMyChatList = async () => {
     const language = localStorage.getItem('user_language') || 'en';
-    const response = await axios.get(`${API_URL}/chat/chats`, {
-        headers: getAuthHeaders(),
+    const response = await apiClient.get('/chat/chats', {
         params: { language }
     });
     return response.data.data.chats;
 };
 
-/**
- * Get or create chat with a user
- */
 export const getOrCreateChat = async (otherUserId: string) => {
     const language = localStorage.getItem('user_language') || 'en';
-    const response = await axios.post(
-        `${API_URL}/chat/chats`,
-        { otherUserId },
-        {
-            headers: getAuthHeaders(),
-            params: { language }
-        }
-    );
+    const response = await apiClient.post('/chat/chats', { otherUserId }, {
+        params: { language }
+    });
     return response.data.data.chat;
 };
 
-/**
- * Get a specific chat by ID
- */
 export const getChatById = async (chatId: string) => {
-    const response = await axios.get(`${API_URL}/chat/chats/${chatId}`, {
-        headers: getAuthHeaders(),
-    });
+    const response = await apiClient.get(`/chat/chats/${chatId}`);
     return response.data.data.chat;
 };
 
-/**
- * Get messages for a chat
- */
-export const getChatMessages = async (chatId: string, params?: { limit?: number; before?: string }) => {
-    const response = await axios.get(`${API_URL}/chat/chats/${chatId}/messages`, {
-        headers: getAuthHeaders(),
-        params,
-    });
+export const getChatMessages = async (chatId: string, params?: any) => {
+    const response = await apiClient.get(`/chat/chats/${chatId}/messages`, { params });
     return response.data.data;
 };
 
-/**
- * Mark chat as read
- */
 export const markChatAsRead = async (chatId: string) => {
-    const response = await axios.patch(
-        `${API_URL}/chat/chats/${chatId}/read`,
-        {},
-        {
-            headers: getAuthHeaders(),
-        }
-    );
+    const response = await apiClient.patch(`/chat/chats/${chatId}/read`);
     return response.data;
 };
 
-// ========================
-// MESSAGING
-// ========================
-
-/**
- * Send text message
- */
 export const sendMessage = async (chatId: string, content: string) => {
-    const response = await axios.post(
-        `${API_URL}/chat/messages`,
-        { chatId, content },
-        {
-            headers: getAuthHeaders(),
-        }
-    );
+    const response = await apiClient.post('/chat/messages', { chatId, content });
     return response.data.data;
 };
 
-/**
- * Send "Hi" message
- */
 export const sendHiMessage = async (receiverId: string) => {
-    const response = await axios.post(
-        `${API_URL}/chat/messages/hi`,
-        { receiverId },
-        {
-            headers: getAuthHeaders(),
-        }
-    );
+    const response = await apiClient.post('/chat/messages/hi', { receiverId });
     return response.data.data;
 };
 
-/**
- * Send gift
- */
 export const sendGift = async (chatId: string, giftIds: string[], content?: string) => {
-    const response = await axios.post(
-        `${API_URL}/chat/messages/gift`,
-        { chatId, giftIds, content },
-        {
-            headers: getAuthHeaders(),
-        }
-    );
+    const response = await apiClient.post('/chat/messages/gift', { chatId, giftIds, content });
     return response.data.data;
 };
 
-/**
- * Get available gifts
- */
 export const getAvailableGifts = async () => {
-    const response = await axios.get(`${API_URL}/chat/gifts`, {
-        headers: getAuthHeaders(),
-    });
+    const response = await apiClient.get('/chat/gifts');
     return response.data.data.gifts;
 };
 
-/**
- * Get gift history
- */
 export const getGiftHistory = async () => {
-    const response = await axios.get(`${API_URL}/chat/history/gifts`, {
-        headers: getAuthHeaders(),
-    });
+    const response = await apiClient.get('/chat/history/gifts');
     return response.data.data.history;
 };
 

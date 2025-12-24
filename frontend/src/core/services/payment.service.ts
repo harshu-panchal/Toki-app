@@ -1,19 +1,4 @@
-/**
- * Payment Service - Frontend API Client for Razorpay Payments
- * @purpose: Handle coin purchase flow with Razorpay integration
- */
-
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-// Helper to get auth headers
-const getAuthHeaders = () => {
-    const token = localStorage.getItem('matchmint_auth_token');
-    return {
-        Authorization: `Bearer ${token}`,
-    };
-};
+import apiClient from '../api/client';
 
 // Razorpay Key ID (public key, safe to expose)
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || '';
@@ -36,46 +21,18 @@ export const loadRazorpayScript = (): Promise<boolean> => {
     });
 };
 
-/**
- * Create a Razorpay order for coin purchase
- */
 export const createOrder = async (planId: string) => {
-    const response = await axios.post(
-        `${API_URL}/payment/create-order`,
-        { planId },
-        { headers: getAuthHeaders() }
-    );
+    const response = await apiClient.post('/payment/create-order', { planId });
     return response.data.data;
 };
 
-/**
- * Verify payment after Razorpay checkout
- */
-export const verifyPayment = async (data: {
-    razorpay_order_id: string;
-    razorpay_payment_id: string;
-    razorpay_signature: string;
-    transactionId: string;
-}) => {
-    const response = await axios.post(
-        `${API_URL}/payment/verify`,
-        data,
-        { headers: getAuthHeaders() }
-    );
+export const verifyPayment = async (data: any) => {
+    const response = await apiClient.post('/payment/verify', data);
     return response.data.data;
 };
 
-/**
- * Get payment/purchase history
- */
-export const getPaymentHistory = async (params?: {
-    page?: number;
-    limit?: number;
-}) => {
-    const response = await axios.get(`${API_URL}/payment/history`, {
-        headers: getAuthHeaders(),
-        params,
-    });
+export const getPaymentHistory = async (params?: any) => {
+    const response = await apiClient.get('/payment/history', { params });
     return response.data.data;
 };
 

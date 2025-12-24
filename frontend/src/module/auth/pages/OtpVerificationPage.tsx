@@ -91,6 +91,9 @@ export const OtpVerificationPage = () => {
         setError(null);
 
         try {
+            // OTP BYPASS (123456) - Active for development
+            // Current validation logic is maintained in the backend
+
             const endpoint = state.mode === 'login'
                 ? `${API_URL}/auth/login-verify`
                 : `${API_URL}/auth/signup-verify`;

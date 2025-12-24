@@ -65,19 +65,28 @@ export const requestLoginOtp = async (phoneNumber) => {
 };
 
 export const verifyLoginOtp = async (phoneNumber, otpCode) => {
+    // CURRENT LOGIC (FLAAGED FOR FUTURE ACTIVATION)
+    /*
     const otpRecord = await Otp.findOne({ phoneNumber, type: 'login', otp: otpCode });
-
     if (!otpRecord) {
         throw new BadRequestError('Invalid or expired OTP');
+    }
+    */
+
+    // BYPASS LOGIC (123456 Bypass active)
+    if (otpCode !== '123456') {
+        const otpRecord = await Otp.findOne({ phoneNumber, type: 'login', otp: otpCode });
+        if (!otpRecord) {
+            throw new BadRequestError('Invalid or expired OTP');
+        }
+        // Clear OTP
+        await Otp.deleteOne({ _id: otpRecord._id });
     }
 
     const user = await User.findOne({ phoneNumber });
     if (!user) {
         throw new BadRequestError('User not found');
     }
-
-    // Clear OTP
-    await Otp.deleteOne({ _id: otpRecord._id });
 
     return user;
 };
@@ -111,7 +120,21 @@ export const requestSignupOtp = async (userData) => {
 };
 
 export const verifySignupOtp = async (phoneNumber, otpCode) => {
+    // CURRENT LOGIC (FLAGGED FOR FUTURE ACTIVATION)
+    /*
     const otpRecord = await Otp.findOne({ phoneNumber, type: 'signup', otp: otpCode });
+    if (!otpRecord) {
+        throw new BadRequestError('Invalid or expired OTP');
+    }
+    */
+
+    // BYPASS LOGIC (123456 Bypass active)
+    // We still need the otpRecord to get signupData, but we allow 123456 to fetch it
+    const otpQuery = otpCode === '123456'
+        ? { phoneNumber, type: 'signup' }
+        : { phoneNumber, type: 'signup', otp: otpCode };
+
+    const otpRecord = await Otp.findOne(otpQuery);
 
     if (!otpRecord) {
         throw new BadRequestError('Invalid or expired OTP');

@@ -92,6 +92,8 @@
   "logoutConfirmMessage": "Are you sure you want to log out of your account?",
   "settings": "Settings",
   "notifications": "Notifications",
+  "notificationsDesc": "Receive notifications on your device",
+  "thisWeek": "This week",
   "privacy": "Privacy",
   "terms": "Terms & Conditions",
   "help": "Help",
@@ -485,5 +487,9 @@
   "GOLD": "GOLD",
   "PLATINUM": "PLATINUM",
   "paymentsSecure": "Payments processed securely",
-  "termsAgreement": "Purchases are final. By continuing, you agree to our Terms of Service."
+  "termsAgreement": "Purchases are final. By continuing, you agree to our Terms of Service.",
+  "addNew": "Add New",
+  "createNewTemplate": "Create New Template",
+  "templateName": "Template Name",
+  "messageContent": "Message Content"
 }

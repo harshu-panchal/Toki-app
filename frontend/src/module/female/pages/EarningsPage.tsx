@@ -108,7 +108,7 @@ export const EarningsPage = () => {
       />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
+      <header className="flex items-center justify-between px-4 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -192,7 +192,7 @@ export const EarningsPage = () => {
           </div>
 
           {/* Earnings History */}
-          <div className="flex-1 overflow-y-auto px-6 min-h-0">
+          <div className="flex-1 overflow-y-auto px-4 min-h-0">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('recentEarnings')}</h2>
             {earningsTransactions.length === 0 ? (
               <div className="text-center py-8">

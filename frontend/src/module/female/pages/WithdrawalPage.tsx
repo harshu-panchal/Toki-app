@@ -169,7 +169,7 @@ export const WithdrawalPage = () => {
       />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
+      <header className="flex items-center justify-between px-4 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -190,7 +190,7 @@ export const WithdrawalPage = () => {
 
       {/* Error Message */}
       {!isLoading && error && (
-        <div className="px-6 py-2">
+        <div className="px-4 py-2">
           <div className="p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl flex items-center gap-2">
             <MaterialSymbol name="error" className="text-red-500" />
             <span className="flex-1">{error}</span>
@@ -202,7 +202,7 @@ export const WithdrawalPage = () => {
       )}
 
       {!isLoading && (
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 min-h-0">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 min-h-0">
           {/* Available Balance */}
           <div className="bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/10 dark:to-primary/5 rounded-xl p-6 border border-primary/10">
             <p className="text-sm font-medium text-slate-600 dark:text-[#cbbc90] mb-2">{t('availableBalance')}</p>

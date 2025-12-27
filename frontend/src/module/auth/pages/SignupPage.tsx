@@ -191,7 +191,7 @@ export const SignupPage = () => {
                 onChange={(e) => handleChange('fullName', e.target.value)}
                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${errors.fullName ? 'border-red-500' : 'border-gray-300'
                   }`}
-                placeholder="Enter your full name"
+                placeholder={t('Enter your full name')}
                 disabled={isSubmitting}
               />
               {errors.fullName && <p className="mt-1 text-sm text-red-500">{errors.fullName}</p>}
@@ -260,7 +260,7 @@ export const SignupPage = () => {
                       className="mr-3 w-4 h-4 text-pink-500 focus:ring-pink-500"
                       disabled={isSubmitting}
                     />
-                    <span className="text-gray-700 capitalize">{gender}</span>
+                    <span className="text-gray-700 capitalize">{t(gender === 'male' ? 'Male' : 'Female')}</span>
                   </label>
                 ))}
               </div>
@@ -269,7 +269,7 @@ export const SignupPage = () => {
 
             {/* Profile Photo */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('Profile Photo')}</label>
               {formData.profilePhoto ? (
                 <div className="relative">
                   <img
@@ -300,7 +300,7 @@ export const SignupPage = () => {
                   disabled={isSubmitting}
                 >
                   <MaterialSymbol name="add_photo_alternate" size={48} className="text-gray-400 mb-2" />
-                  <span className="text-gray-600">Click to upload photo</span>
+                  <span className="text-gray-600">{t('Click to upload photo')}</span>
                 </button>
               )}
               <input
@@ -317,7 +317,7 @@ export const SignupPage = () => {
             {formData.gender === 'female' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Aadhaar Verification <span className="text-red-500">*</span>
+                  {t('Aadhaar Verification')} <span className="text-red-500">*</span>
                 </label>
                 {formData.aadhaarDocument ? (
                   <div className="relative">
@@ -349,7 +349,7 @@ export const SignupPage = () => {
                     disabled={isSubmitting}
                   >
                     <MaterialSymbol name="badge" size={48} className="text-gray-400 mb-2" />
-                    <span className="text-gray-600">Upload Aadhaar for verification</span>
+                    <span className="text-gray-600">{t('Upload Aadhaar for verification')}</span>
                   </button>
                 )}
                 <input
@@ -360,7 +360,7 @@ export const SignupPage = () => {
                   className="hidden"
                 />
                 {errors.aadhaarDocument && <p className="mt-1 text-sm text-red-500">{errors.aadhaarDocument}</p>}
-                <p className="mt-2 text-xs text-gray-500">Required for female account verification</p>
+                <p className="mt-2 text-xs text-gray-500">{t('Required for female account verification')}</p>
               </div>
             )}
 
@@ -373,10 +373,10 @@ export const SignupPage = () => {
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <MaterialSymbol name="sync" size={20} className="animate-spin" />
-                  Creating Account...
+                  {t('Creating Account...')}
                 </span>
               ) : (
-                'Create Account'
+                t('Create Account')
               )}
             </button>
           </form>
@@ -384,13 +384,13 @@ export const SignupPage = () => {
           {/* Login Link */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Already have an account?{' '}
+              {t('Already have an account?')}{' '}
               <button
                 onClick={() => navigate('/login')}
                 className="text-pink-600 font-semibold hover:text-pink-700"
                 disabled={isSubmitting}
               >
-                Login
+                {t('Login')}
               </button>
             </p>
           </div>

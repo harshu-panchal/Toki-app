@@ -158,7 +158,7 @@ export const AutoMessageTemplatesPage = () => {
       />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
+      <header className="flex items-center justify-between px-4 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -173,14 +173,11 @@ export const AutoMessageTemplatesPage = () => {
           className="flex items-center gap-2 px-4 py-2 bg-primary text-slate-900 font-bold rounded-lg hover:bg-yellow-400 transition-colors"
         >
           <MaterialSymbol name="add" />
-          {t('addPhoto')} {/* Using 'addPhoto' as dummy for 'Add' or I can use 'add' if exists */}
-          {/* I'll use 'New' translated if I have it or just 'Add' */}
-          {t('addPhoto').replace(' Photo', '').replace(' फोटो', '')} {/* Hacky, I'll add 'new' key */}
-          New
+          {t('addNew')}
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
         <p className="text-sm text-gray-500 dark:text-[#cbbc90] mb-4">
           {t('autoMessagesDesc')}
         </p>

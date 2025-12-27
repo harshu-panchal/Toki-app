@@ -128,7 +128,7 @@ export const NotificationsPage = () => {
       />
 
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
+      <header className="flex items-center justify-between px-4 py-4 bg-background-light dark:bg-background-dark border-b border-gray-200 dark:border-white/5">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
@@ -153,7 +153,7 @@ export const NotificationsPage = () => {
         )}
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <MaterialSymbol name="notifications_off" size={64} className="text-gray-400 mb-4" />

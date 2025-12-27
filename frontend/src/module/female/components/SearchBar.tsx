@@ -16,7 +16,7 @@ export const SearchBar = ({ placeholder = 'Search chats...', onSearch }: SearchB
   };
 
   return (
-    <div className="px-6 pb-2 shrink-0">
+    <div className="px-4 pb-2 shrink-0">
       <label className="flex items-center w-full h-12 bg-white dark:bg-[#2f151e] rounded-xl shadow-sm border border-gray-100 dark:border-transparent focus-within:ring-2 focus-within:ring-primary/50 transition-all overflow-hidden">
         <div className="pl-4 text-gray-400 dark:text-[#cc8ea3]">
           <MaterialSymbol name="search" />

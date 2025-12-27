@@ -8,6 +8,7 @@ import { FemaleSidebar } from '../components/FemaleSidebar';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { useTranslation } from '../../../core/hooks/useTranslation';
+import userService from '../../../core/services/user.service';
 
 export const MyProfilePage = () => {
   const { t, changeLanguage, currentLanguage } = useTranslation();
@@ -24,23 +25,43 @@ export const MyProfilePage = () => {
 
   const [showOnlineStatus, setShowOnlineStatus] = useState(true);
   const [allowMessagesFrom, setAllowMessagesFrom] = useState<'everyone' | 'verified'>('everyone');
-  const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
 
-  // Stats
-  const stats = {
-    messagesReceived: 1247,
-    profileViews: 3421,
-    activeConversations: 23,
-    totalEarnings: 15250,
-    availableBalance: 12450,
-  };
+  // Stats - fetched from backend
+  const [stats, setStats] = useState({
+    messagesReceived: 0,
+    profileViews: 0,
+    activeConversations: 0,
+    totalEarnings: 0,
+    availableBalance: 0,
+  });
+  const [_isStatsLoading, setIsStatsLoading] = useState(true);
 
   const [photos, setPhotos] = useState<string[]>([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    fetchProfileStats();
   }, []);
+
+  // Fetch real stats from backend
+  const fetchProfileStats = async () => {
+    try {
+      setIsStatsLoading(true);
+      const data = await userService.getFemaleDashboardData();
+      setStats({
+        messagesReceived: data.stats?.messagesReceived || 0,
+        profileViews: data.stats?.profileViews || 0,
+        activeConversations: data.stats?.activeConversations || 0,
+        totalEarnings: data.earnings?.totalEarnings || 0,
+        availableBalance: data.earnings?.availableBalance || 0,
+      });
+    } catch (error) {
+      console.error('Failed to fetch profile stats:', error);
+    } finally {
+      setIsStatsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -97,7 +118,7 @@ export const MyProfilePage = () => {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 min-h-0">
         {/* Profile Header Card - Clickable */}
         <div
           onClick={() => setIsEditModalOpen(true)}
@@ -236,10 +257,10 @@ export const MyProfilePage = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">{t('profileViews')}</p>
-                  <p className="text-xs text-gray-500 dark:text-[#cbbc90]">+12% from last week</p>
+                  <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{t('thisWeek')}</p>
                 </div>
               </div>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">342</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">{stats.profileViews.toLocaleString()}</p>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#2a2515] rounded-lg">
@@ -326,25 +347,8 @@ export const MyProfilePage = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{t('emailNotifications')}</p>
-                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{t('emailNotificationsDesc')}</p>
-                  </div>
-                  <button
-                    onClick={() => setEmailNotifications(!emailNotifications)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${emailNotifications ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
-                      }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${emailNotifications ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{t('pushNotifications')}</p>
-                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{t('pushNotificationsDesc')}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{t('notifications')}</p>
+                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{t('notificationsDesc')}</p>
                   </div>
                   <button
                     onClick={() => setPushNotifications(!pushNotifications)}

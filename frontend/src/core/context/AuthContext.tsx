@@ -31,39 +31,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     useEffect(() => {
         // Initialize from local storage
-        // Initialize from local storage
         const initAuth = async () => {
             const storedToken = getAuthToken();
             const storedUser = getUser();
 
             if (storedToken) {
                 setToken(storedToken);
-                // Optimistically set user from storage
+                // Optimistically set user from storage immediately (fast path)
                 if (storedUser) {
-                    // Map stored user if it's in raw format (has _id or profile)
                     const profile = (storedUser._id || storedUser.profile)
                         ? mapUserToProfile(storedUser)
                         : storedUser;
                     setUserState(profile);
                     setIsAuthenticated(true);
                 }
+                // Set loading to false immediately so UI can render with cached data
+                setIsLoading(false);
 
+                // Refresh profile in background (non-blocking)
                 try {
                     const rawUser = await fetchUserProfile();
-                    console.log('Fetched profile from backend:', rawUser);
                     const profile = mapUserToProfile(rawUser);
                     setUserState(profile);
                     setStorageUser(profile);
                     setIsAuthenticated(true);
                 } catch (error) {
                     console.error('Failed to refresh profile', error);
-                    // Optional: If error is 401, clear auth
+                    // If 401, token is invalid - clear auth
+                    if ((error as any)?.response?.status === 401) {
+                        clearAuth();
+                        setToken(null);
+                        setUserState(null);
+                        setIsAuthenticated(false);
+                    }
                 }
             } else {
                 clearAuth();
                 setToken(null);
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
 
         initAuth();

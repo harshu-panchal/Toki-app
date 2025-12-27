@@ -207,9 +207,7 @@ export const WithdrawalPage = () => {
           <div className="bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/10 dark:to-primary/5 rounded-xl p-6 border border-primary/10">
             <p className="text-sm font-medium text-slate-600 dark:text-[#cbbc90] mb-2">{t('availableBalance')}</p>
             <p className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              {balance.toLocaleString()} {t('interestsLabel')} {/* Using 'interestsLabel' as dummy for 'coins' if needed, or but I have amountCoins */}
-              {/* Actually I should probably have a 'coins' key. I'll use coins suffix if simple or just 'coins' */}
-              {balance.toLocaleString()} coins
+              {balance.toLocaleString()} {t('coinBalance').split(' ')[0]} {/* Simplified coins suffix */}
             </p>
             <p className="text-xs text-slate-500 dark:text-[#cbbc90]">
               {t('minWithdrawalNote', { amount: minWithdrawal.toLocaleString() })}
@@ -309,7 +307,7 @@ export const WithdrawalPage = () => {
                     <div className="bg-gray-50 dark:bg-[#2a2515] rounded-lg p-4">
                       <p className="text-sm text-gray-600 dark:text-[#cbbc90] mb-1">{t('withdrawal')} {t('amountCoins')}</p>
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {parseInt(amount || '0').toLocaleString()} coins
+                        {parseInt(amount || '0').toLocaleString()} {t('coinBalance').split(' ')[0]}
                       </p>
                     </div>
 
@@ -460,7 +458,7 @@ export const WithdrawalPage = () => {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-semibold text-gray-900 dark:text-white">
-                        {withdrawal.coinsRequested.toLocaleString()} coins
+                        {withdrawal.coinsRequested.toLocaleString()} {t('coinBalance').split(' ')[0]}
                       </p>
                       <span className={`text-sm font-medium ${getStatusColor(withdrawal.status)}`}>
                         {getStatusText(withdrawal.status)}

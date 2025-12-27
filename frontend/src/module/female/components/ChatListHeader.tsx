@@ -1,4 +1,5 @@
 import { MaterialSymbol } from '../types/material-symbol';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 interface ChatListHeaderProps {
   onEditClick?: () => void;
@@ -6,11 +7,12 @@ interface ChatListHeaderProps {
 }
 
 export const ChatListHeader = ({ onEditClick, coinBalance }: ChatListHeaderProps) => {
+  const { t } = useTranslation();
   return (
     <header className="flex items-center justify-between px-4 py-2 bg-background-light dark:bg-background-dark z-10 shrink-0">
       <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Chats</h1>
-        <p className="text-xs text-gray-500 dark:text-[#cbbc90]">Free messaging</p>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{t('chats')}</h1>
+        <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{t('freeMessaging')}</p>
       </div>
       <div className="flex items-center gap-3">
         {/* Coin Balance */}

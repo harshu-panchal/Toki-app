@@ -14,23 +14,23 @@ import { LocationPromptModal } from '../../../shared/components/LocationPromptMo
 import userService from '../../../core/services/user.service';
 import { calculateDistance, formatDistance, areCoordinatesValid } from '../../../utils/distanceCalculator';
 import type { FemaleDashboardData } from '../types/female.types';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
-
-
-const quickActions = [
-  { id: 'earnings', icon: 'trending_up', label: 'View Earnings' },
-  { id: 'withdraw', icon: 'payments', label: 'Withdraw' },
-  { id: 'trade-gifts', icon: 'redeem', label: 'Trade Gifts' },
-  { id: 'auto-messages', icon: 'auto_awesome', label: 'Auto Messages' },
-];
-
-export const FemaleDashboard = () => {
+const FemaleDashboardContent = () => {
+  const { t } = useTranslation();
   const [dashboardData, setDashboardData] = useState<FemaleDashboardData | null>(null);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
+
+  const quickActions = useMemo(() => [
+    { id: 'earnings', icon: 'trending_up', label: t('viewEarnings') },
+    { id: 'withdraw', icon: 'payments', label: t('withdraw') },
+    { id: 'trade-gifts', icon: 'redeem', label: t('tradeGifts') },
+    { id: 'auto-messages', icon: 'auto_awesome', label: t('autoMessages') },
+  ], [t]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -41,7 +41,6 @@ export const FemaleDashboard = () => {
     try {
       setIsLoading(true);
       const data = await userService.getFemaleDashboardData();
-
       setDashboardData(data);
     } catch (error) {
       console.error('Failed to fetch female dashboard:', error);
@@ -102,7 +101,6 @@ export const FemaleDashboard = () => {
     navigate('/female/chats');
   };
 
-
   const handleQuickActionClick = (actionId: string) => {
     switch (actionId) {
       case 'earnings':
@@ -123,7 +121,6 @@ export const FemaleDashboard = () => {
   };
 
   const handleLocationSave = (location: string, coordinates?: { lat: number, lng: number }) => {
-    // Update user context
     if (updateUser) {
       updateUser({
         location,
@@ -139,24 +136,21 @@ export const FemaleDashboard = () => {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background-light dark:bg-background-dark">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-        <p className="mt-4 text-gray-500 dark:text-gray-400">Loading dashboard...</p>
+        <p className="mt-4 text-gray-500 dark:text-gray-400">{t('loadingDashboard')}</p>
       </div>
     );
   }
 
   return (
     <div className="relative flex w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-20">
-      {/* Location Prompt Modal */}
       {showLocationPrompt && (
         <LocationPromptModal
           onSave={handleLocationSave}
           onClose={() => setShowLocationPrompt(false)}
         />
       )}
-      {/* Top Navbar */}
       <FemaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
 
-      {/* Sidebar */}
       <FemaleSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -164,14 +158,12 @@ export const FemaleDashboard = () => {
         onItemClick={handleNavigationClick}
       />
 
-      {/* Profile Header Section */}
       <div className="flex p-4 pt-4 @container">
         <div className="flex w-full flex-col gap-4">
           <ProfileHeader
-            user={dashboardData?.user || { name: 'Loading...', avatar: '', isPremium: false, isOnline: false }}
+            user={dashboardData?.user || { name: t('loading'), avatar: '', isPremium: false, isOnline: false }}
             onNotificationClick={handleNotificationClick}
           />
-          {/* Earnings Card */}
           <EarningsCard
             totalEarnings={dashboardData?.earnings.totalEarnings || 0}
             availableBalance={dashboardData?.earnings.availableBalance || 0}
@@ -182,23 +174,19 @@ export const FemaleDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <FemaleStatsGrid stats={dashboardData?.stats || { messagesReceived: 0, activeConversations: 0, profileViews: 0 }} />
 
-      {/* Quick Actions Grid */}
       <QuickActionsGrid actions={quickActions.map(action => ({
         ...action,
         onClick: () => handleQuickActionClick(action.id),
       }))} />
 
-      {/* Active Chats List */}
       <ActiveChatsList
         chats={activeChatsForDisplay}
         onChatClick={handleChatClick}
         onSeeAllClick={handleSeeAllChatsClick}
       />
 
-      {/* Bottom Navigation Bar */}
       <FemaleBottomNavigation
         items={navigationItems}
         onItemClick={handleNavigationClick}
@@ -207,3 +195,6 @@ export const FemaleDashboard = () => {
   );
 };
 
+export const FemaleDashboard = () => (
+  <FemaleDashboardContent />
+);

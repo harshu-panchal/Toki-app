@@ -1,4 +1,5 @@
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 interface QuickAction {
   id: string;
@@ -28,9 +29,10 @@ const QuickActionCard = ({ action }: { action: QuickAction }) => {
 };
 
 export const QuickActionsGrid = ({ actions }: QuickActionsGridProps) => {
+  const { t } = useTranslation();
   return (
     <div className="flex w-full flex-col px-4">
-      <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">Quick Actions</h2>
+      <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">{t('quickActions')}</h2>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {actions.map((action) => (
           <QuickActionCard key={action.id} action={action} />

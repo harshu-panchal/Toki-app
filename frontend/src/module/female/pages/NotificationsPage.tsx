@@ -6,6 +6,7 @@ import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
 import { FemaleSidebar } from '../components/FemaleSidebar';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import type { Notification } from '../types/female.types';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 // Mock data - replace with actual API calls
 const mockNotifications: Notification[] = [
@@ -39,6 +40,7 @@ const mockNotifications: Notification[] = [
 ];
 
 export const NotificationsPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
 
@@ -134,7 +136,7 @@ export const NotificationsPage = () => {
           >
             <MaterialSymbol name="arrow_back" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('notifications')}</h1>
           {unreadCount > 0 && (
             <span className="px-2 py-1 bg-primary text-slate-900 text-xs font-bold rounded-full">
               {unreadCount}
@@ -146,7 +148,7 @@ export const NotificationsPage = () => {
             onClick={handleMarkAllAsRead}
             className="text-sm text-primary font-medium hover:underline"
           >
-            Mark all read
+            {t('markAllRead')}
           </button>
         )}
       </header>
@@ -155,7 +157,7 @@ export const NotificationsPage = () => {
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <MaterialSymbol name="notifications_off" size={64} className="text-gray-400 mb-4" />
-            <p className="text-gray-500 dark:text-[#cbbc90] text-lg">No notifications</p>
+            <p className="text-gray-500 dark:text-[#cbbc90] text-lg">{t('noNotificationsFound')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -163,9 +165,8 @@ export const NotificationsPage = () => {
               <div
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
-                className={`flex items-start gap-4 p-4 bg-white dark:bg-[#342d18] rounded-xl shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2515] transition-colors ${
-                  !notification.isRead ? 'border-l-4 border-primary' : ''
-                }`}
+                className={`flex items-start gap-4 p-4 bg-white dark:bg-[#342d18] rounded-xl shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2515] transition-colors ${!notification.isRead ? 'border-l-4 border-primary' : ''
+                  }`}
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
                   <MaterialSymbol name={getNotificationIcon(notification.type)} />

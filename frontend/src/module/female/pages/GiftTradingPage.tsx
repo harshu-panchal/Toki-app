@@ -7,6 +7,7 @@ import { FemaleSidebar } from '../components/FemaleSidebar';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import { getGiftTheme } from '../utils/giftThemes';
 import type { Gift, GiftTrade } from '../types/female.types';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 // Mock data - replace with actual API calls
 const mockReceivedGifts: Gift[] = [
@@ -99,6 +100,7 @@ const mockTradeHistory: GiftTrade[] = [
 ];
 
 export const GiftTradingPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
   const [selectedGifts, setSelectedGifts] = useState<string[]>([]);
@@ -124,7 +126,7 @@ export const GiftTradingPage = () => {
 
   const handleTrade = () => {
     if (selectedGifts.length === 0) return;
-    
+
     // Navigate to trade flow page with selected gifts
     navigate('/female/trade-gifts/flow', {
       state: {
@@ -156,7 +158,7 @@ export const GiftTradingPage = () => {
           >
             <MaterialSymbol name="arrow_back" size={24} />
           </button>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Trade Gifts</h1>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">{t('tradeGifts')}</h1>
           <div className="size-10" /> {/* Spacer */}
         </div>
 
@@ -164,23 +166,21 @@ export const GiftTradingPage = () => {
         <div className="flex border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setActiveTab('available')}
-            className={`flex-1 py-3 text-center font-medium transition-colors ${
-              activeTab === 'available'
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-gray-500 dark:text-gray-400'
-            }`}
+            className={`flex-1 py-3 text-center font-medium transition-colors ${activeTab === 'available'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-gray-500 dark:text-gray-400'
+              }`}
           >
-            Available ({mockReceivedGifts.length})
+            {t('availableTab')} ({mockReceivedGifts.length})
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`flex-1 py-3 text-center font-medium transition-colors ${
-              activeTab === 'history'
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-gray-500 dark:text-gray-400'
-            }`}
+            className={`flex-1 py-3 text-center font-medium transition-colors ${activeTab === 'history'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-gray-500 dark:text-gray-400'
+              }`}
           >
-            History ({mockTradeHistory.length})
+            {t('history')} ({mockTradeHistory.length})
           </button>
         </div>
       </div>
@@ -195,10 +195,10 @@ export const GiftTradingPage = () => {
                 <MaterialSymbol name="info" className="text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                    Trade your received gifts for money
+                    {t('tradeGiftsMoney')}
                   </p>
                   <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                    Select gifts to trade. The trade value will be added to your earnings balance.
+                    {t('tradeGiftsDesc')}
                   </p>
                 </div>
               </div>
@@ -210,23 +210,21 @@ export const GiftTradingPage = () => {
                 {mockReceivedGifts.map((gift) => {
                   const theme = getGiftTheme(gift);
                   const isSelected = selectedGifts.includes(gift.id);
-                  
+
                   return (
                     <button
                       key={gift.id}
                       onClick={() => toggleGiftSelection(gift.id)}
-                      className={`relative p-4 rounded-2xl border-2 transition-all ${
-                        isSelected
-                          ? `bg-gradient-to-br ${theme.primary} border-primary shadow-lg scale-105`
-                          : 'bg-white dark:bg-[#342d18] border-gray-200 dark:border-gray-700 hover:border-primary/50'
-                      }`}
+                      className={`relative p-4 rounded-2xl border-2 transition-all ${isSelected
+                        ? `bg-gradient-to-br ${theme.primary} border-primary shadow-lg scale-105`
+                        : 'bg-white dark:bg-[#342d18] border-gray-200 dark:border-gray-700 hover:border-primary/50'
+                        }`}
                     >
                       {/* Selection Checkbox */}
-                      <div className={`absolute top-2 right-2 size-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                        isSelected
-                          ? 'bg-white border-white'
-                          : 'bg-white/80 dark:bg-black/40 border-gray-300 dark:border-gray-600'
-                      }`}>
+                      <div className={`absolute top-2 right-2 size-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected
+                        ? 'bg-white border-white'
+                        : 'bg-white/80 dark:bg-black/40 border-gray-300 dark:border-gray-600'
+                        }`}>
                         {isSelected && (
                           <MaterialSymbol name="check" size={16} className="text-primary" />
                         )}
@@ -234,17 +232,15 @@ export const GiftTradingPage = () => {
 
                       {/* Quantity Badge */}
                       {gift.quantity && gift.quantity > 1 && (
-                        <div className={`absolute top-2 left-2 rounded-full px-2 py-1 text-xs font-bold shadow-md ${
-                          isSelected ? 'bg-white/90 text-primary' : 'bg-primary text-white'
-                        }`}>
+                        <div className={`absolute top-2 left-2 rounded-full px-2 py-1 text-xs font-bold shadow-md ${isSelected ? 'bg-white/90 text-primary' : 'bg-primary text-white'
+                          }`}>
                           ×{gift.quantity}
                         </div>
                       )}
 
                       {/* Gift Icon */}
-                      <div className={`flex items-center justify-center mb-3 p-4 rounded-xl bg-gradient-to-br ${
-                        isSelected ? 'bg-white/20' : theme.secondary
-                      }`}>
+                      <div className={`flex items-center justify-center mb-3 p-4 rounded-xl bg-gradient-to-br ${isSelected ? 'bg-white/20' : theme.secondary
+                        }`}>
                         <MaterialSymbol
                           name={gift.icon as any}
                           size={40}
@@ -253,16 +249,14 @@ export const GiftTradingPage = () => {
                       </div>
 
                       {/* Gift Name */}
-                      <h3 className={`font-bold text-sm mb-1 text-center ${
-                        isSelected ? 'text-white' : 'text-gray-900 dark:text-white'
-                      }`}>
+                      <h3 className={`font-bold text-sm mb-1 text-center ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'
+                        }`}>
                         {gift.name}
                       </h3>
 
                       {/* Trade Value */}
-                      <div className={`flex flex-col items-center gap-1 mt-2 ${
-                        isSelected ? 'text-white/90' : 'text-green-600 dark:text-green-400'
-                      }`}>
+                      <div className={`flex flex-col items-center gap-1 mt-2 ${isSelected ? 'text-white/90' : 'text-green-600 dark:text-green-400'
+                        }`}>
                         <div className="flex items-center gap-1">
                           <MaterialSymbol name="monetization_on" size={14} />
                           <span className="text-xs font-semibold">
@@ -279,10 +273,9 @@ export const GiftTradingPage = () => {
 
                       {/* Sender Info */}
                       {gift.senderName && (
-                        <p className={`text-[10px] mt-1 text-center ${
-                          isSelected ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'
-                        }`}>
-                          From {gift.senderName}
+                        <p className={`text-[10px] mt-1 text-center ${isSelected ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'
+                          }`}>
+                          {t('from')} {gift.senderName}
                         </p>
                       )}
                     </button>
@@ -293,7 +286,7 @@ export const GiftTradingPage = () => {
               <div className="flex flex-col items-center justify-center py-12">
                 <MaterialSymbol name="redeem" size={64} className="text-gray-300 dark:text-gray-600 mb-4" />
                 <p className="text-gray-500 dark:text-gray-400 text-center">
-                  No gifts available to trade
+                  {t('noGiftsSentYet')} {/* Or a new key like noGiftsAvailableToTrade */}
                 </p>
               </div>
             )}
@@ -303,7 +296,7 @@ export const GiftTradingPage = () => {
               <div className="sticky bottom-0 mt-4 p-4 bg-white dark:bg-[#342d18] rounded-2xl border-2 border-primary shadow-xl">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Selected: {selectedGifts.length} gift(s)
+                    {t('selectedCount', { count: selectedGifts.length })}
                   </span>
                   <div className="flex items-center gap-1">
                     <MaterialSymbol name="monetization_on" size={18} className="text-green-600 dark:text-green-400" />
@@ -316,7 +309,7 @@ export const GiftTradingPage = () => {
                   onClick={handleTrade}
                   className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg active:scale-95"
                 >
-                  Trade Now
+                  {t('tradeNow')}
                 </button>
               </div>
             )}
@@ -330,7 +323,7 @@ export const GiftTradingPage = () => {
                   name: trade.giftName,
                   icon: trade.giftIcon,
                 } as Gift);
-                
+
                 return (
                   <div
                     key={trade.id}
@@ -366,7 +359,7 @@ export const GiftTradingPage = () => {
               <div className="flex flex-col items-center justify-center py-12">
                 <MaterialSymbol name="history" size={64} className="text-gray-300 dark:text-gray-600 mb-4" />
                 <p className="text-gray-500 dark:text-gray-400 text-center">
-                  No trade history yet
+                  {t('noTradeHistoryYet')}
                 </p>
               </div>
             )}

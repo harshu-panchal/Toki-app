@@ -13,8 +13,10 @@ import socketService from '../../../core/services/socket.service';
 import type { Chat as ApiChat } from '../../../core/types/chat.types';
 import { useAuth } from '../../../core/context/AuthContext';
 import { calculateDistance, formatDistance, areCoordinatesValid } from '../../../utils/distanceCalculator';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 export const ChatListPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
   const { coinBalance } = useGlobalState();
@@ -59,7 +61,7 @@ export const ChatListPage = () => {
       setError(null);
     } catch (err: any) {
       console.error('Failed to fetch chats:', err);
-      setError(err.response?.data?.message || 'Failed to load chats');
+      setError(err.response?.data?.message || t('errorLoadChats'));
     } finally {
       setIsLoading(false);
     }
@@ -117,15 +119,15 @@ export const ChatListPage = () => {
         userId: chat.otherUser._id,
         userName: chat.otherUser.name,
         userAvatar: chat.otherUser.avatar || '',
-        lastMessage: chat.lastMessage?.content || 'Start chatting!',
-        timestamp: formatTimestamp(chat.lastMessageAt),
+        lastMessage: chat.lastMessage?.content || t('startChatting'),
+        timestamp: formatTimestamp(chat.lastMessageAt, t),
         isOnline: chat.otherUser.isOnline,
         hasUnread: shouldHighlight,
         unreadCount: chat.unreadCount,
         distance: distanceStr,
       };
     });
-  }, [chats, currentUserId, currentUser]);
+  }, [chats, currentUserId, currentUser, t]);
 
   const filteredChats = useMemo(() => {
     if (!searchQuery.trim()) return transformedChats;
@@ -154,7 +156,7 @@ export const ChatListPage = () => {
       />
 
       <ChatListHeader coinBalance={availableBalance} />
-      <SearchBar onSearch={setSearchQuery} placeholder="Search chats..." />
+      <SearchBar onSearch={setSearchQuery} placeholder={t('searchChats')} />
 
       <div className="flex-1 overflow-y-auto px-4 py-2 min-h-0">
         {/* Loading State */}
@@ -175,9 +177,9 @@ export const ChatListPage = () => {
         {!isLoading && !error && filteredChats.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center py-12">
             <span className="text-5xl mb-4">💬</span>
-            <p className="text-gray-500 dark:text-[#cbbc90] text-lg">No chats found</p>
+            <p className="text-gray-500 dark:text-[#cbbc90] text-lg">{t('noChatsFound')}</p>
             <p className="text-gray-400 dark:text-[#cbbc90]/70 text-sm mt-2">
-              {searchQuery ? 'Try a different search term' : 'Wait for someone to message you!'}
+              {searchQuery ? t('tryDifferentSearch') : t('waitForMessage')}
             </p>
           </div>
         )}
@@ -194,7 +196,7 @@ export const ChatListPage = () => {
 };
 
 // Helper function to format timestamp
-function formatTimestamp(date: string | Date): string {
+function formatTimestamp(date: string | Date, t: any): string {
   const d = new Date(date);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
@@ -203,7 +205,7 @@ function formatTimestamp(date: string | Date): string {
   if (diffDays === 0) {
     return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   } else if (diffDays === 1) {
-    return 'Yesterday';
+    return t('yesterday');
   } else if (diffDays < 7) {
     return d.toLocaleDateString('en-US', { weekday: 'short' });
   } else {

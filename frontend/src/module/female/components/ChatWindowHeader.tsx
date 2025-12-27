@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { MaterialSymbol } from '../types/material-symbol';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 interface ChatWindowHeaderProps {
   userName: string;
@@ -18,6 +19,7 @@ export const ChatWindowHeader = ({
   onUserInfoClick,
   coinBalance,
 }: ChatWindowHeaderProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
@@ -52,7 +54,7 @@ export const ChatWindowHeader = ({
               {userName}
             </h2>
             <p className="text-[10px] text-gray-500 dark:text-[#cc8ea3] leading-tight">
-              {isOnline ? 'Online' : 'Offline'}
+              {isOnline ? t('online') : t('offline')}
             </p>
           </div>
         </button>

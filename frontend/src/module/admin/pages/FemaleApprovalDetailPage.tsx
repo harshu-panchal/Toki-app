@@ -191,7 +191,7 @@ export const FemaleApprovalDetailPage = () => {
                                 <div className="flex items-start gap-6">
                                     <div className="size-24 rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-white dark:border-gray-700 shadow-sm shrink-0">
                                         {approval.profile.photos && approval.profile.photos[0] ? (
-                                            <img src={approval.profile.photos[0]} alt={approval.user.name} className="w-full h-full object-cover" />
+                                            <img src={typeof approval.profile.photos[0] === 'string' ? approval.profile.photos[0] : approval.profile.photos[0]?.url} alt={approval.user.name} className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-400">
                                                 {approval.user.name.charAt(0)}
@@ -249,7 +249,7 @@ export const FemaleApprovalDetailPage = () => {
                                                 />
                                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                     <button
-                                                        onClick={() => window.open(approval.verificationDocuments.aadhaarCard.url, '_blank')}
+                                                        onClick={() => window.open(approval.verificationDocuments?.aadhaarCard?.url, '_blank')}
                                                         className="px-4 py-2 bg-white text-gray-900 rounded-lg font-medium shadow-lg hover:bg-gray-100 transition-colors"
                                                     >
                                                         View Full Size
@@ -277,7 +277,7 @@ export const FemaleApprovalDetailPage = () => {
                                 <div className="grid grid-cols-2 gap-3">
                                     {approval.profile.photos && approval.profile.photos.map((photo, idx) => (
                                         <div key={idx} className="aspect-square rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 relative group">
-                                            <img src={photo} alt={`Profile ${idx}`} className="w-full h-full object-cover" />
+                                            <img src={typeof photo === 'string' ? photo : photo?.url} alt={`Profile ${idx}`} className="w-full h-full object-cover" />
                                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                                         </div>
                                     ))}

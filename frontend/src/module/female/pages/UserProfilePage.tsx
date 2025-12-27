@@ -6,6 +6,7 @@ import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import { useAuth } from '../../../core/context/AuthContext';
 import { calculateDistance, formatDistance, areCoordinatesValid } from '../../../utils/distanceCalculator';
 import userService from '../../../core/services/user.service';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 interface UserProfile {
   _id: string;
@@ -24,6 +25,7 @@ interface UserProfile {
 }
 
 export const UserProfilePage = () => {
+  const { t } = useTranslation();
   const { profileId } = useParams<{ profileId: string }>();
   const navigate = useNavigate();
   const { navigationItems, handleNavigationClick } = useFemaleNavigation();
@@ -44,7 +46,7 @@ export const UserProfilePage = () => {
 
     if (!profileId) {
       console.error('[FemaleUserProfilePage] No profileId provided');
-      setError('No user ID');
+      setError(t('noUserId'));
       setIsLoading(false);
       return;
     }
@@ -91,7 +93,7 @@ export const UserProfilePage = () => {
     } catch (err: any) {
       console.error('[FemaleUserProfilePage] Error fetching profile:', err);
       console.error('[FemaleUserProfilePage] Error response:', err.response);
-      setError(err.response?.data?.message || err.message || 'Failed to load profile');
+      setError(err.response?.data?.message || err.message || t('errorLoadingProfile'));
     } finally {
       console.log('[FemaleUserProfilePage] Setting isLoading to false');
       setIsLoading(false);
@@ -110,12 +112,12 @@ export const UserProfilePage = () => {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background-light dark:bg-background-dark p-4">
         <MaterialSymbol name="error" size={48} className="text-red-500 mb-4" />
-        <p className="text-gray-500 dark:text-gray-400 mb-4">{error || 'Profile not found'}</p>
+        <p className="text-gray-500 dark:text-gray-400 mb-4">{error || t('profileNotFound')}</p>
         <button
           onClick={() => navigate(-1)}
           className="px-4 py-2 bg-primary text-slate-900 font-bold rounded-lg"
         >
-          Go Back
+          {t('goBack')}
         </button>
       </div>
     );
@@ -135,7 +137,7 @@ export const UserProfilePage = () => {
           >
             <MaterialSymbol name="arrow_back" />
           </button>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Profile</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('profile')}</h1>
         </div>
       </header>
 
@@ -153,7 +155,7 @@ export const UserProfilePage = () => {
             {profile.isOnline && (
               <div className="absolute top-4 right-4 flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">
                 <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                Online
+                {t('online')}
               </div>
             )}
           </div>
@@ -170,7 +172,7 @@ export const UserProfilePage = () => {
               )}
             </div>
             <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
-              {profile.age && <span>{profile.age} years old</span>}
+              {profile.age && <span>{t('yearsOld', { count: profile.age })}</span>}
               {profile.location && <span>• {profile.location}</span>}
               {profile.distance && (
                 <span className="flex items-center gap-1 font-medium text-primary">
@@ -190,7 +192,7 @@ export const UserProfilePage = () => {
           {/* Interests */}
           {(profile.interests && profile.interests.length > 0) && (
             <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">Interests</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">{t('interests')}</h3>
               <div className="flex flex-wrap gap-2">
                 {profile.interests.map((interest, index) => (
                   <span
@@ -207,7 +209,7 @@ export const UserProfilePage = () => {
           {/* Bio */}
           {profile.bio && (
             <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">About</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('about')}</h3>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{profile.bio}</p>
             </div>
           )}
@@ -215,7 +217,7 @@ export const UserProfilePage = () => {
           {/* Photo Gallery */}
           {photos.length > 1 && (
             <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">Photos</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">{t('photos')}</h3>
               <div className="grid grid-cols-3 gap-2">
                 {photos.map((photo, index) => (
                   <div
@@ -230,7 +232,7 @@ export const UserProfilePage = () => {
                     />
                     {photo.isPrimary && (
                       <div className="absolute top-1 right-1 bg-primary text-slate-900 px-2 py-0.5 rounded text-xs font-bold">
-                        Primary
+                        {t('primary')}
                       </div>
                     )}
                   </div>

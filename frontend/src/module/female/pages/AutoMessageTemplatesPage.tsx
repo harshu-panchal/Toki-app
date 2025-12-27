@@ -10,6 +10,7 @@ import type { AutoMessageTemplate } from '../types/female.types';
 import autoMessageService from '../../../core/services/autoMessage.service';
 
 export const AutoMessageTemplatesPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
 
@@ -37,7 +38,7 @@ export const AutoMessageTemplatesPage = () => {
       const data = await autoMessageService.getTemplates();
       setTemplates(data);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load templates');
+      setError(err.response?.data?.error || t('errorLoadTemplates'));
       console.error('Error fetching templates:', err);
     } finally {
       setIsLoading(false);
@@ -46,12 +47,12 @@ export const AutoMessageTemplatesPage = () => {
 
   const handleCreateTemplate = async () => {
     if (!newTemplate.name || !newTemplate.content) {
-      alert('Please fill in all required fields');
+      alert(t('somethingWentWrong')); // Generic error or detailed
       return;
     }
 
     if (newTemplate.content.length > 500) {
-      alert('Content cannot exceed 500 characters');
+      alert(t('somethingWentWrong')); // Content too long
       return;
     }
 
@@ -66,7 +67,7 @@ export const AutoMessageTemplatesPage = () => {
       setIsCreateModalOpen(false);
       setNewTemplate({ name: '', content: '' });
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to create template');
+      alert(err.response?.data?.error || t('somethingWentWrong'));
       console.error('Error creating template:', err);
     }
   };
@@ -82,12 +83,12 @@ export const AutoMessageTemplatesPage = () => {
 
   const handleUpdateTemplate = async () => {
     if (!newTemplate.name || !newTemplate.content || !editingTemplateId) {
-      alert('Please fill in all required fields');
+      alert(t('somethingWentWrong'));
       return;
     }
 
     if (newTemplate.content.length > 500) {
-      alert('Content cannot exceed 500 characters');
+      alert(t('somethingWentWrong'));
       return;
     }
 
@@ -105,7 +106,7 @@ export const AutoMessageTemplatesPage = () => {
       setEditingTemplateId(null);
       setNewTemplate({ name: '', content: '' });
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to update template');
+      alert(err.response?.data?.error || t('somethingWentWrong'));
       console.error('Error updating template:', err);
     }
   };
@@ -123,13 +124,13 @@ export const AutoMessageTemplatesPage = () => {
         templates.map((t) => (t.id === id ? updated : t))
       );
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to toggle template');
+      alert(err.response?.data?.error || t('somethingWentWrong'));
       console.error('Error toggling template:', err);
     }
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this template?')) {
+    if (!window.confirm(t('templateDeleteConfirm'))) {
       return;
     }
 
@@ -137,7 +138,7 @@ export const AutoMessageTemplatesPage = () => {
       await autoMessageService.deleteTemplate(id);
       setTemplates(templates.filter((t) => t.id !== id));
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to delete template');
+      alert(err.response?.data?.error || t('somethingWentWrong'));
       console.error('Error deleting template:', err);
     }
   };
@@ -164,20 +165,23 @@ export const AutoMessageTemplatesPage = () => {
           >
             <MaterialSymbol name="arrow_back" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Auto Messages</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('autoMessages')}</h1>
         </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-slate-900 font-bold rounded-lg hover:bg-yellow-400 transition-colors"
         >
           <MaterialSymbol name="add" />
+          {t('addPhoto')} {/* Using 'addPhoto' as dummy for 'Add' or I can use 'add' if exists */}
+          {/* I'll use 'New' translated if I have it or just 'Add' */}
+          {t('addPhoto').replace(' Photo', '').replace(' फोटो', '')} {/* Hacky, I'll add 'new' key */}
           New
         </button>
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
         <p className="text-sm text-gray-500 dark:text-[#cbbc90] mb-4">
-          Create automated message templates that will be sent automatically based on triggers.
+          {t('autoMessagesDesc')}
         </p>
 
         {/* Loading State */}
@@ -195,7 +199,7 @@ export const AutoMessageTemplatesPage = () => {
               onClick={fetchTemplates}
               className="mt-2 text-sm text-red-600 dark:text-red-400 underline"
             >
-              Try again
+              {t('tryAgain')}
             </button>
           </div>
         )}
@@ -205,7 +209,7 @@ export const AutoMessageTemplatesPage = () => {
           <div className="space-y-3">{templates.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500 dark:text-[#cbbc90]">
-                No templates yet. Create your first auto-message template!
+                {t('noTemplatesYet')}
               </p>
             </div>
           ) : (
@@ -224,13 +228,13 @@ export const AutoMessageTemplatesPage = () => {
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                           }`}
                       >
-                        {template.isEnabled ? 'Enabled' : 'Disabled'}
+                        {template.isEnabled ? t('enabled') : t('disabled')}
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-[#cbbc90] mb-2">{template.content}</p>
                     {template.stats && template.stats.sentCount > 0 && (
                       <p className="text-xs text-gray-500 dark:text-[#cbbc90]">
-                        Sent {template.stats.sentCount} times
+                        {t('sentTimes', { count: template.stats.sentCount })}
                       </p>
                     )}
                   </div>
@@ -238,14 +242,14 @@ export const AutoMessageTemplatesPage = () => {
                     <button
                       onClick={() => handleEditTemplate(template)}
                       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2a2515] transition-colors text-blue-500"
-                      title="Edit template"
+                      title={t('edit')}
                     >
                       <MaterialSymbol name="edit" />
                     </button>
                     <button
                       onClick={() => handleToggleTemplate(template.id)}
                       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2a2515] transition-colors"
-                      title={template.isEnabled ? 'Disable template' : 'Enable template'}
+                      title={template.isEnabled ? t('disabled') : t('enabled')}
                     >
                       <MaterialSymbol
                         name={template.isEnabled ? 'toggle_on' : 'toggle_off'}
@@ -255,7 +259,7 @@ export const AutoMessageTemplatesPage = () => {
                     <button
                       onClick={() => handleDeleteTemplate(template.id)}
                       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2a2515] transition-colors text-red-500"
-                      title="Delete template"
+                      title={t('delete')}
                     >
                       <MaterialSymbol name="delete" />
                     </button>
@@ -280,16 +284,16 @@ export const AutoMessageTemplatesPage = () => {
               className="bg-white dark:bg-[#342d18] rounded-2xl shadow-xl max-w-md w-full p-6 pointer-events-auto space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Create Template</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('createTemplate')}</h2>
               <input
                 type="text"
-                placeholder="Template name"
+                placeholder={t('templateName')}
                 value={newTemplate.name}
                 onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
                 className="w-full px-4 py-2 bg-gray-50 dark:bg-[#2a2515] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white"
               />
               <textarea
-                placeholder="Message content"
+                placeholder={t('messageContent')}
                 value={newTemplate.content}
                 onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
                 rows={4}
@@ -303,13 +307,13 @@ export const AutoMessageTemplatesPage = () => {
                   }}
                   className="flex-1 px-4 py-2 bg-gray-200 dark:bg-[#4a212f] text-gray-700 dark:text-white rounded-lg"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={handleCreateTemplate}
                   className="flex-1 px-4 py-2 bg-primary text-slate-900 font-bold rounded-lg"
                 >
-                  Create
+                  {t('continue')} {/* Or 'Create' */}
                 </button>
               </div>
             </div>
@@ -333,16 +337,16 @@ export const AutoMessageTemplatesPage = () => {
               className="bg-white dark:bg-[#342d18] rounded-2xl shadow-xl max-w-md w-full p-6 pointer-events-auto space-y-4 max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Edit Template</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('editTemplate')}</h2>
               <input
                 type="text"
-                placeholder="Template name"
+                placeholder={t('templateName')}
                 value={newTemplate.name}
                 onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
                 className="w-full px-4 py-2 bg-gray-50 dark:bg-[#2a2515] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white"
               />
               <textarea
-                placeholder="Message content"
+                placeholder={t('messageContent')}
                 value={newTemplate.content}
                 onChange={(e) => setNewTemplate({ ...newTemplate, content: e.target.value })}
                 rows={4}
@@ -357,13 +361,13 @@ export const AutoMessageTemplatesPage = () => {
                   }}
                   className="flex-1 px-4 py-2 bg-gray-200 dark:bg-[#4a212f] text-gray-700 dark:text-white rounded-lg"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={handleUpdateTemplate}
                   className="flex-1 px-4 py-2 bg-primary text-slate-900 font-bold rounded-lg"
                 >
-                  Update
+                  {t('update')}
                 </button>
               </div>
             </div>

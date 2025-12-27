@@ -1,6 +1,5 @@
-// @ts-nocheck
-import { MaterialSymbol } from '../types/material-symbol';
 import type { Chat } from '../types/female.types';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 interface ActiveChatsListProps {
   chats: Chat[];
@@ -54,15 +53,16 @@ const ChatItem = ({ chat, onClick }: { chat: Chat; onClick?: () => void }) => {
 };
 
 export const ActiveChatsList = ({ chats, onChatClick, onSeeAllClick }: ActiveChatsListProps) => {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col w-full">
       <div className="flex items-center justify-between px-4 pb-2 pt-2">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Active Chats</h2>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('activeChats')}</h2>
         <button
           onClick={onSeeAllClick}
           className="text-sm font-medium text-primary hover:text-yellow-300 transition-colors"
         >
-          See All
+          {t('seeAll')}
         </button>
       </div>
       {chats.map((chat) => (

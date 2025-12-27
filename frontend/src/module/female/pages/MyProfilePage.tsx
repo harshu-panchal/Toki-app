@@ -18,9 +18,9 @@ export const MyProfilePage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Local display state (synced with user)
-  const [name, setName] = useState(user?.name || 'Anonymous');
+  const [name, setName] = useState(user?.name || t('anonymous'));
   const [age, setAge] = useState(24);
-  const [location, setLocation] = useState('New York, USA');
+  const [location, setLocation] = useState(t('unknownLocation'));
 
   const [showOnlineStatus, setShowOnlineStatus] = useState(true);
   const [allowMessagesFrom, setAllowMessagesFrom] = useState<'everyone' | 'verified'>('everyone');
@@ -44,9 +44,9 @@ export const MyProfilePage = () => {
 
   useEffect(() => {
     if (user) {
-      setName(user.name || 'Anonymous');
+      setName(user.name || t('anonymous'));
       setAge(user.age || 24);
-      setLocation(user.location || user.city || 'Unknown Location');
+      setLocation(user.location || user.city || t('unknownLocation'));
 
       if (user.photos && user.photos.length > 0) {
         setPhotos(user.photos);
@@ -56,7 +56,7 @@ export const MyProfilePage = () => {
         setPhotos([]);
       }
     }
-  }, [user]);
+  }, [user, t]);
 
   if (isAuthLoading) {
     return (
@@ -156,7 +156,7 @@ export const MyProfilePage = () => {
               </div>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.messagesReceived.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 dark:text-[#cbbc90] mt-1">Messages</p>
+            <p className="text-xs text-gray-500 dark:text-[#cbbc90] mt-1">{t('messages')}</p>
           </div>
 
           <div className="bg-white dark:bg-[#342d18] rounded-xl p-4 shadow-sm text-center">
@@ -166,7 +166,7 @@ export const MyProfilePage = () => {
               </div>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.profileViews.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 dark:text-[#cbbc90] mt-1">Views</p>
+            <p className="text-xs text-gray-500 dark:text-[#cbbc90] mt-1">{t('views')}</p>
           </div>
 
           <div className="bg-white dark:bg-[#342d18] rounded-xl p-4 shadow-sm text-center">
@@ -184,7 +184,7 @@ export const MyProfilePage = () => {
         <div className="bg-gradient-to-r from-primary/20 to-primary/5 dark:from-primary/10 dark:to-primary/5 rounded-xl p-4 border border-primary/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-[#cbbc90] mb-1">Available Balance</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-[#cbbc90] mb-1">{t('availableBalance')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.availableBalance.toLocaleString()} coins</p>
             </div>
             <button
@@ -235,7 +235,7 @@ export const MyProfilePage = () => {
                   <MaterialSymbol name="trending_up" className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Profile Views This Week</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{t('profileViews')}</p>
                   <p className="text-xs text-gray-500 dark:text-[#cbbc90]">+12% from last week</p>
                 </div>
               </div>
@@ -248,11 +248,11 @@ export const MyProfilePage = () => {
                   <MaterialSymbol name="chat_bubble" className="text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Active Conversations</p>
-                  <p className="text-xs text-gray-500 dark:text-[#cbbc90]">23 ongoing chats</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{t('activeConversations')}</p>
+                  <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{stats.activeConversations} ongoing chats</p>
                 </div>
               </div>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">23</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white">{stats.activeConversations}</p>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#2a2515] rounded-lg">
@@ -261,7 +261,7 @@ export const MyProfilePage = () => {
                   <MaterialSymbol name="account_balance_wallet" className="text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Total Earnings</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{t('totalEarnings')}</p>
                   <p className="text-xs text-gray-500 dark:text-[#cbbc90]">All time earnings</p>
                 </div>
               </div>
@@ -287,8 +287,8 @@ export const MyProfilePage = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Show Online Status</p>
-                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">Let others see when you're online</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{t('showOnlineStatus')}</p>
+                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{t('showOnlineStatusDesc')}</p>
                   </div>
                   <button
                     onClick={() => setShowOnlineStatus(!showOnlineStatus)}
@@ -304,16 +304,16 @@ export const MyProfilePage = () => {
 
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Who Can Message Me</p>
-                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">Control who can send you messages</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{t('whoCanMessageMe')}</p>
+                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{t('whoCanMessageMeDesc')}</p>
                   </div>
                   <select
                     value={allowMessagesFrom}
                     onChange={(e) => setAllowMessagesFrom(e.target.value as 'everyone' | 'verified')}
                     className="px-3 py-1.5 bg-gray-50 dark:bg-[#2a2515] border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
                   >
-                    <option value="everyone">Everyone</option>
-                    <option value="verified">Verified Only</option>
+                    <option value="everyone">{t('everyone')}</option>
+                    <option value="verified">{t('verifiedOnly')}</option>
                   </select>
                 </div>
               </div>
@@ -326,8 +326,8 @@ export const MyProfilePage = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Email Notifications</p>
-                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">Receive notifications via email</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{t('emailNotifications')}</p>
+                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{t('emailNotificationsDesc')}</p>
                   </div>
                   <button
                     onClick={() => setEmailNotifications(!emailNotifications)}
@@ -343,8 +343,8 @@ export const MyProfilePage = () => {
 
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Push Notifications</p>
-                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">Receive push notifications on device</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{t('pushNotifications')}</p>
+                    <p className="text-xs text-gray-500 dark:text-[#cbbc90]">{t('pushNotificationsDesc')}</p>
                   </div>
                   <button
                     onClick={() => setPushNotifications(!pushNotifications)}
@@ -396,7 +396,7 @@ export const MyProfilePage = () => {
                 >
                   <div className="flex items-center gap-3">
                     <MaterialSymbol name="smart_toy" className="text-gray-600 dark:text-[#cbbc90]" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">Auto Messages</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{t('autoMessages')}</span>
                   </div>
                   <MaterialSymbol name="chevron_right" className="text-gray-400" />
                 </button>

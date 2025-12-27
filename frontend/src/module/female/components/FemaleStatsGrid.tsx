@@ -1,4 +1,5 @@
 import { MaterialSymbol } from '../types/material-symbol';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 interface FemaleStatsGridProps {
   stats: {
@@ -30,26 +31,27 @@ const StatCard = ({ icon, value, label, color }: {
 };
 
 export const FemaleStatsGrid = ({ stats }: FemaleStatsGridProps) => {
+  const { t } = useTranslation();
   return (
     <div className="flex w-full flex-col px-4">
-      <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">Your Stats</h2>
+      <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">{t('yourStats')}</h2>
       <div className="grid grid-cols-3 gap-3">
         <StatCard
           icon="mail"
           value={stats.messagesReceived}
-          label="Messages"
+          label={t('messages')}
           color="bg-blue-100 dark:bg-blue-900/30 text-blue-500"
         />
         <StatCard
           icon="chat_bubble"
           value={stats.activeConversations}
-          label="Chats"
+          label={t('chats')}
           color="bg-purple-100 dark:bg-purple-900/30 text-purple-500"
         />
         <StatCard
           icon="visibility"
           value={stats.profileViews}
-          label="Views"
+          label={t('views')}
           color="bg-amber-100 dark:bg-amber-900/30 text-amber-500"
         />
       </div>

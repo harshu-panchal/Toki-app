@@ -9,8 +9,6 @@ import type { FemaleApproval } from '../types/admin.types';
 
 import * as adminService from '../services/admin.service';
 
-import { useAuth } from '../../../core/context/AuthContext';
-
 import { useAdminStats } from '../context/AdminStatsContext';
 
 export const FemaleApprovalPage = () => {
@@ -23,7 +21,7 @@ export const FemaleApprovalPage = () => {
   const [selectedApprovals, setSelectedApprovals] = useState<Set<string>>(new Set());
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useAdminNavigation();
   const { refreshStats } = useAdminStats();
-  const { token } = useAuth();
+  // removed unused token from useAuth()
 
   useEffect(() => {
     window.scrollTo(0, 0);

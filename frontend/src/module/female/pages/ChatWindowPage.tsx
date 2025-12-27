@@ -13,8 +13,10 @@ import chatService from '../../../core/services/chat.service';
 import socketService from '../../../core/services/socket.service';
 import offlineQueueService from '../../../core/services/offlineQueue.service';
 import type { Chat as ApiChat, Message as ApiMessage } from '../../../core/types/chat.types';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 export const ChatWindowPage = () => {
+  const { t } = useTranslation();
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
   const { navigationItems, handleNavigationClick } = useFemaleNavigation();
@@ -92,7 +94,7 @@ export const ChatWindowPage = () => {
         setError(null);
       } catch (err: any) {
         console.error('Failed to load chat:', err);
-        setError(err.response?.data?.message || 'Failed to load chat');
+        setError(err.response?.data?.message || t('errorFailedToLoadChat'));
       } finally {
         setIsLoading(false);
       }
@@ -257,9 +259,9 @@ export const ChatWindowPage = () => {
             : m
         ));
 
-        setError('Message queued. Will send when back online.');
+        setError(t('messageQueued'));
       } else {
-        setError(err.response?.data?.message || 'Failed to send message');
+        setError(err.response?.data?.message || t('errorFailedToSendMessage'));
         // Remove optimistic message on non-network errors
         setMessages(prev => prev.filter(m => m._id !== optimisticMessage._id));
       }
@@ -292,12 +294,12 @@ export const ChatWindowPage = () => {
   if (!chatInfo) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background-light dark:bg-background-dark p-4">
-        <p className="text-gray-500 dark:text-gray-400 mb-4">Chat not found</p>
+        <p className="text-gray-500 dark:text-gray-400 mb-4">{t('chatNotFound')}</p>
         <button
           onClick={() => navigate('/female/chats')}
-          className="px-4 py-2 bg-primary text-white rounded-lg"
+          className="px-4 py-2 bg-primary text-slate-900 font-bold rounded-lg"
         >
-          Go Back
+          {t('goBack')}
         </button>
       </div>
     );
@@ -327,7 +329,7 @@ export const ChatWindowPage = () => {
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-2 min-h-0">
         {messages.length === 0 && (
           <div className="text-center text-gray-400 dark:text-gray-500 py-8">
-            <p>No messages yet</p>
+            <p>{t('noMessagesYet')}</p>
           </div>
         )}
 
@@ -397,7 +399,7 @@ export const ChatWindowPage = () => {
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
-            <span className="text-xs text-gray-400">{chatInfo.otherUser.name} is typing...</span>
+            <span className="text-xs text-gray-400">{t('typingIndicator', { name: chatInfo.otherUser.name })}</span>
           </div>
         )}
 
@@ -408,7 +410,7 @@ export const ChatWindowPage = () => {
       <MessageInput
         onSendMessage={handleSendMessage}
         onSendPhoto={() => setIsPhotoPickerOpen(true)}
-        placeholder="Type a message..."
+        placeholder={t('typeMessage')}
         disabled={isSending}
       />
 

@@ -6,7 +6,6 @@ import { useAdminNavigation } from '../hooks/useAdminNavigation';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import type { AdminDashboardData, ActivityItem } from '../types/admin.types';
 import * as adminService from '../../../core/services/admin.service';
-import { BarChart, TrendChart } from '../components/DashboardCharts';
 
 export const AdminDashboard = () => {
   const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(null);

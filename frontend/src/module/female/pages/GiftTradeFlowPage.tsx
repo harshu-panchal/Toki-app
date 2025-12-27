@@ -8,6 +8,7 @@ import { FemaleSidebar } from '../components/FemaleSidebar';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import { getGiftTheme } from '../utils/giftThemes';
 import type { Gift } from '../types/female.types';
+import { useTranslation } from '../../../core/hooks/useTranslation';
 
 interface LocationState {
   selectedGifts?: Gift[];
@@ -15,6 +16,7 @@ interface LocationState {
 }
 
 export const GiftTradeFlowPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
@@ -22,17 +24,17 @@ export const GiftTradeFlowPage = () => {
 
   const [step, setStep] = useState<'summary' | 'payment' | 'success'>('summary');
   const [paymentMethod, setPaymentMethod] = useState<'bank' | 'upi'>('bank');
-  
+
   // Bank details
   const [bankDetails, setBankDetails] = useState({
     accountHolderName: '',
     accountNumber: '',
     ifscCode: '',
   });
-  
+
   // UPI details
   const [upiId, setUpiId] = useState('');
-  
+
   // Form validation
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -41,7 +43,7 @@ export const GiftTradeFlowPage = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    
+
     // If no gifts selected, redirect back
     if (!state?.selectedGifts || selectedGifts.length === 0) {
       navigate('/female/trade-gifts');
@@ -50,36 +52,36 @@ export const GiftTradeFlowPage = () => {
 
   const validateBankDetails = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!bankDetails.accountHolderName.trim()) {
-      newErrors.accountHolderName = 'Account holder name is required';
+      newErrors.accountHolderName = t('accountHolderNameRequired');
     }
-    
+
     if (!bankDetails.accountNumber.trim()) {
-      newErrors.accountNumber = 'Account number is required';
+      newErrors.accountNumber = t('accountNumberRequired');
     } else if (!/^\d{9,18}$/.test(bankDetails.accountNumber)) {
-      newErrors.accountNumber = 'Account number must be 9-18 digits';
+      newErrors.accountNumber = t('accountNumberFormat');
     }
-    
+
     if (!bankDetails.ifscCode.trim()) {
-      newErrors.ifscCode = 'IFSC code is required';
+      newErrors.ifscCode = t('ifscCodeRequired');
     } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.ifscCode.toUpperCase())) {
-      newErrors.ifscCode = 'Invalid IFSC code format';
+      newErrors.ifscCode = t('ifscCodeFormat');
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateUpiDetails = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!upiId.trim()) {
-      newErrors.upiId = 'UPI ID is required';
+      newErrors.upiId = t('upiIdRequired');
     } else if (!/^[\w.-]+@[\w]+$/.test(upiId.trim())) {
-      newErrors.upiId = 'Invalid UPI ID format (e.g., name@paytm)';
+      newErrors.upiId = t('upiIdFormat');
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -98,7 +100,7 @@ export const GiftTradeFlowPage = () => {
           bankDetails: paymentMethod === 'bank' ? bankDetails : undefined,
           upiId: paymentMethod === 'upi' ? upiId : undefined,
         });
-        
+
         // Simulate API call
         setTimeout(() => {
           setStep('success');
@@ -146,9 +148,9 @@ export const GiftTradeFlowPage = () => {
             <MaterialSymbol name="arrow_back" size={24} />
           </button>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-            {step === 'summary' && 'Trade Gifts'}
-            {step === 'payment' && 'Payment Details'}
-            {step === 'success' && 'Trade Successful'}
+            {step === 'summary' && t('tradeGifts')}
+            {step === 'payment' && t('paymentDetails')}
+            {step === 'success' && t('tradeSuccessful')}
           </h1>
           {step !== 'success' && (
             <button
@@ -160,26 +162,24 @@ export const GiftTradeFlowPage = () => {
             </button>
           )}
         </div>
-        
+
         {/* Progress Steps */}
         {step !== 'success' && (
           <div className="flex items-center justify-center gap-2 px-4 pb-4">
             <div className={`flex items-center gap-2 ${step === 'summary' ? 'text-primary' : 'text-gray-400'}`}>
-              <div className={`size-8 rounded-full flex items-center justify-center ${
-                step === 'summary' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
-              }`}>
+              <div className={`size-8 rounded-full flex items-center justify-center ${step === 'summary' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                }`}>
                 <MaterialSymbol name="shopping_bag" size={18} />
               </div>
-              <span className="text-xs font-medium">Summary</span>
+              <span className="text-xs font-medium">{t('summary')}</span>
             </div>
             <div className="h-px w-8 bg-gray-300 dark:bg-gray-600" />
             <div className={`flex items-center gap-2 ${step === 'payment' ? 'text-primary' : 'text-gray-400'}`}>
-              <div className={`size-8 rounded-full flex items-center justify-center ${
-                step === 'payment' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
-              }`}>
+              <div className={`size-8 rounded-full flex items-center justify-center ${step === 'payment' ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                }`}>
                 <MaterialSymbol name="payment" size={18} />
               </div>
-              <span className="text-xs font-medium">Payment</span>
+              <span className="text-xs font-medium">{t('payment')}</span>
             </div>
           </div>
         )}
@@ -192,7 +192,7 @@ export const GiftTradeFlowPage = () => {
             {/* Selected Gifts */}
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
-                Selected Gifts ({selectedGifts.length})
+                {t('selectedGifts')} ({selectedGifts.length})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {selectedGifts.map((gift) => {
@@ -222,7 +222,7 @@ export const GiftTradeFlowPage = () => {
                         </div>
                         {gift.senderName && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            From {gift.senderName}
+                            {t('from')} {gift.senderName}
                           </p>
                         )}
                       </div>
@@ -250,7 +250,7 @@ export const GiftTradeFlowPage = () => {
             <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border-2 border-green-200 dark:border-green-800">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Total Trade Value
+                  {t('totalTradeValue')}
                 </span>
                 <div className="flex items-center gap-2">
                   <MaterialSymbol name="monetization_on" size={24} className="text-green-600 dark:text-green-400" />
@@ -261,11 +261,11 @@ export const GiftTradeFlowPage = () => {
               </div>
               {selectedGifts.some(g => g.quantity && g.quantity > 1) && (
                 <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                  {selectedGifts.reduce((sum, g) => sum + (g.quantity || 1), 0)} gift(s) total
+                  {t('giftsCountTotal', { count: selectedGifts.reduce((sum, g) => sum + (g.quantity || 1), 0) })}
                 </div>
               )}
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
-                This amount will be added to your earnings balance after processing
+                {t('tradeBalanceNote')}
               </p>
             </div>
           </div>
@@ -276,45 +276,41 @@ export const GiftTradeFlowPage = () => {
             {/* Payment Method Selection */}
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
-                Select Payment Method
+                {t('selectPayoutMethod')}
               </h2>
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setPaymentMethod('bank')}
-                  className={`p-6 rounded-2xl border-2 transition-all ${
-                    paymentMethod === 'bank'
-                      ? 'border-primary bg-primary/10 shadow-lg'
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#342d18] hover:border-primary/50'
-                  }`}
+                  className={`p-6 rounded-2xl border-2 transition-all ${paymentMethod === 'bank'
+                    ? 'border-primary bg-primary/10 shadow-lg'
+                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#342d18] hover:border-primary/50'
+                    }`}
                 >
                   <MaterialSymbol
                     name="account_balance"
                     size={40}
                     className={paymentMethod === 'bank' ? 'text-primary' : 'text-gray-400'}
                   />
-                  <p className={`text-base font-semibold mt-3 ${
-                    paymentMethod === 'bank' ? 'text-primary' : 'text-gray-600 dark:text-gray-400'
-                  }`}>
-                    Bank Transfer
+                  <p className={`text-base font-semibold mt-3 ${paymentMethod === 'bank' ? 'text-primary' : 'text-gray-600 dark:text-gray-400'
+                    }`}>
+                    {t('bankTransfer')}
                   </p>
                 </button>
                 <button
                   onClick={() => setPaymentMethod('upi')}
-                  className={`p-6 rounded-2xl border-2 transition-all ${
-                    paymentMethod === 'upi'
-                      ? 'border-primary bg-primary/10 shadow-lg'
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#342d18] hover:border-primary/50'
-                  }`}
+                  className={`p-6 rounded-2xl border-2 transition-all ${paymentMethod === 'upi'
+                    ? 'border-primary bg-primary/10 shadow-lg'
+                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#342d18] hover:border-primary/50'
+                    }`}
                 >
                   <MaterialSymbol
                     name="qr_code"
                     size={40}
                     className={paymentMethod === 'upi' ? 'text-primary' : 'text-gray-400'}
                   />
-                  <p className={`text-base font-semibold mt-3 ${
-                    paymentMethod === 'upi' ? 'text-primary' : 'text-gray-600 dark:text-gray-400'
-                  }`}>
-                    UPI
+                  <p className={`text-base font-semibold mt-3 ${paymentMethod === 'upi' ? 'text-primary' : 'text-gray-600 dark:text-gray-400'
+                    }`}>
+                    {t('upi')}
                   </p>
                 </button>
               </div>
@@ -324,12 +320,12 @@ export const GiftTradeFlowPage = () => {
             {paymentMethod === 'bank' && (
               <div className="space-y-4">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Bank Account Details
+                  {t('bankAccountDetails')}
                 </h2>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Account Holder Name
+                    {t('accountHolderName')}
                   </label>
                   <input
                     type="text"
@@ -339,7 +335,7 @@ export const GiftTradeFlowPage = () => {
                       setErrors({ ...errors, accountHolderName: '' });
                     }}
                     className="w-full px-4 py-3 bg-white dark:bg-[#342d18] border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder="Enter account holder name"
+                    placeholder={t('accountHolderNamePlaceholder')}
                   />
                   {errors.accountHolderName && (
                     <p className="mt-1 text-sm text-red-600">{errors.accountHolderName}</p>
@@ -348,7 +344,7 @@ export const GiftTradeFlowPage = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Account Number
+                    {t('accountNumber')}
                   </label>
                   <input
                     type="text"
@@ -358,7 +354,7 @@ export const GiftTradeFlowPage = () => {
                       setErrors({ ...errors, accountNumber: '' });
                     }}
                     className="w-full px-4 py-3 bg-white dark:bg-[#342d18] border border-gray-300 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder="Enter account number"
+                    placeholder={t('accountNumberPlaceholder')}
                     maxLength={18}
                   />
                   {errors.accountNumber && (
@@ -368,7 +364,7 @@ export const GiftTradeFlowPage = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    IFSC Code
+                    {t('ifscCode')}
                   </label>
                   <input
                     type="text"
@@ -392,12 +388,12 @@ export const GiftTradeFlowPage = () => {
             {paymentMethod === 'upi' && (
               <div className="space-y-4">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                  UPI Details
+                  {t('upiDetails')}
                 </h2>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    UPI ID
+                    {t('upiId')}
                   </label>
                   <input
                     type="text"
@@ -413,7 +409,7 @@ export const GiftTradeFlowPage = () => {
                     <p className="mt-1 text-sm text-red-600">{errors.upiId}</p>
                   )}
                   <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    Format: name@paytm, name@phonepe, name@ybl, etc.
+                    {t('upiIdHelp')}
                   </p>
                 </div>
               </div>
@@ -423,7 +419,7 @@ export const GiftTradeFlowPage = () => {
             <div className="p-6 bg-gray-50 dark:bg-[#342d18] rounded-2xl border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <span className="text-base font-semibold text-gray-700 dark:text-gray-300">
-                  Amount to Receive
+                  {t('amountToReceive')}
                 </span>
                 <span className="text-2xl font-bold text-green-600 dark:text-green-400">
                   ₹{totalValue}
@@ -439,10 +435,10 @@ export const GiftTradeFlowPage = () => {
               <MaterialSymbol name="check_circle" size={64} className="text-green-600 dark:text-green-400" />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3 text-center">
-              Trade Successful!
+              {t('tradeSuccessfulTitle')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 text-center mb-2">
-              Your {selectedGifts.length} gift(s) have been traded for
+              {t('tradeSuccessfulDesc', { count: selectedGifts.length })}
             </p>
             <div className="flex items-center gap-2 mb-6">
               <MaterialSymbol name="monetization_on" size={32} className="text-green-600 dark:text-green-400" />
@@ -451,7 +447,7 @@ export const GiftTradeFlowPage = () => {
               </span>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-              The amount will be added to your earnings balance within 24-48 hours
+              {t('earningsProcessingNote')}
             </p>
           </div>
         )}
@@ -465,13 +461,13 @@ export const GiftTradeFlowPage = () => {
               onClick={handleBack}
               className="flex-1 py-4 bg-gray-100 dark:bg-[#342d18] text-gray-700 dark:text-white font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-[#4b202e] transition-colors"
             >
-              {step === 'summary' ? 'Cancel' : 'Back'}
+              {step === 'summary' ? t('cancel') : t('back')}
             </button>
             <button
               onClick={handleNext}
               className="flex-1 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg active:scale-95"
             >
-              {step === 'summary' ? 'Continue' : 'Submit Request'}
+              {step === 'summary' ? t('continue') : t('submitRequest')}
             </button>
           </div>
         </div>
@@ -484,7 +480,7 @@ export const GiftTradeFlowPage = () => {
               onClick={handleSuccessClose}
               className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all shadow-lg active:scale-95"
             >
-              Done
+              {t('done')}
             </button>
           </div>
         </div>

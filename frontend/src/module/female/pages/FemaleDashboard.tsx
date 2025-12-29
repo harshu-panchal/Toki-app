@@ -160,8 +160,7 @@ const FemaleDashboardContent = () => {
       {/* Permission Prompt - Shows on first app open */}
       {showPermissionPrompt && (
         <PermissionPrompt
-          onRequestPermissions={async () => {
-            await requestAllPermissions();
+          onRequestPermissions={() => {
             setShowPermissionPrompt(false);
           }}
           onDismiss={() => {

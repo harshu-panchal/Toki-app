@@ -8,11 +8,40 @@ interface PermissionPromptProps {
 
 export const PermissionPrompt = ({ onRequestPermissions, onDismiss }: PermissionPromptProps) => {
     const [isRequesting, setIsRequesting] = useState(false);
+    const [error, setError] = useState('');
 
     const handleRequest = async () => {
         setIsRequesting(true);
-        await onRequestPermissions();
-        setIsRequesting(false);
+        setError('');
+
+        try {
+            // Request camera and microphone - this triggers Android system dialog
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+            });
+
+            // Stop tracks immediately
+            stream.getTracks().forEach(track => track.stop());
+
+            // Also request location
+            await new Promise<void>((resolve) => {
+                navigator.geolocation.getCurrentPosition(
+                    () => resolve(),
+                    () => resolve(), // Continue even if location denied
+                    { timeout: 5000 }
+                );
+            });
+
+            // Mark as requested
+            localStorage.setItem('matchmint_permissions_requested', 'true');
+
+            onRequestPermissions();
+        } catch (err: any) {
+            console.error('Permission error:', err);
+            setError('Please enable camera and microphone permissions to use video calls');
+            setIsRequesting(false);
+        }
     };
 
     return (
@@ -29,6 +58,12 @@ export const PermissionPrompt = ({ onRequestPermissions, onDismiss }: Permission
                         To use video calls and find nearby users, please allow access to your camera, microphone, and location.
                     </p>
                 </div>
+
+                {error && (
+                    <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                    </div>
+                )}
 
                 <div className="space-y-2">
                     <button

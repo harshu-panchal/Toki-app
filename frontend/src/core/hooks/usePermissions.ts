@@ -8,6 +8,14 @@ export interface PermissionState {
     location: PermissionStatus;
 }
 
+// LocalStorage keys for permission states
+const PERMISSION_KEYS = {
+    CAMERA: 'matchmint_camera_permission',
+    MICROPHONE: 'matchmint_microphone_permission',
+    LOCATION: 'matchmint_location_permission',
+    REQUESTED: 'matchmint_permissions_requested',
+};
+
 export const usePermissions = () => {
     const [permissions, setPermissions] = useState<PermissionState>({
         camera: 'unknown',
@@ -17,40 +25,57 @@ export const usePermissions = () => {
 
     const [isChecking, setIsChecking] = useState(false);
 
-    // Check current permission status
+    // Load permission states from localStorage
+    const loadStoredPermissions = useCallback(() => {
+        const stored: PermissionState = {
+            camera: (localStorage.getItem(PERMISSION_KEYS.CAMERA) as PermissionStatus) || 'prompt',
+            microphone: (localStorage.getItem(PERMISSION_KEYS.MICROPHONE) as PermissionStatus) || 'prompt',
+            location: (localStorage.getItem(PERMISSION_KEYS.LOCATION) as PermissionStatus) || 'prompt',
+        };
+        setPermissions(stored);
+        return stored;
+    }, []);
+
+    // Save permission state to localStorage
+    const savePermissionState = useCallback((type: 'camera' | 'microphone' | 'location', status: PermissionStatus) => {
+        const key = PERMISSION_KEYS[type.toUpperCase() as keyof typeof PERMISSION_KEYS];
+        localStorage.setItem(key, status);
+        setPermissions(prev => ({ ...prev, [type]: status }));
+    }, []);
+
+    // Check current permission status from browser API
     const checkPermissions = useCallback(async () => {
         setIsChecking(true);
-        const newState: PermissionState = {
-            camera: 'unknown',
-            microphone: 'unknown',
-            location: 'unknown',
-        };
+        const newState: PermissionState = { ...permissions };
 
         try {
-            // Check camera permission
             if (navigator.permissions) {
+                // Check camera
                 try {
                     const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
                     newState.camera = cameraPermission.state as PermissionStatus;
+                    savePermissionState('camera', cameraPermission.state as PermissionStatus);
                 } catch (e) {
-                    // Some browsers don't support querying camera permission
-                    newState.camera = 'prompt';
+                    // Fallback to stored state
+                    newState.camera = (localStorage.getItem(PERMISSION_KEYS.CAMERA) as PermissionStatus) || 'prompt';
                 }
 
-                // Check microphone permission
+                // Check microphone
                 try {
                     const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
                     newState.microphone = micPermission.state as PermissionStatus;
+                    savePermissionState('microphone', micPermission.state as PermissionStatus);
                 } catch (e) {
-                    newState.microphone = 'prompt';
+                    newState.microphone = (localStorage.getItem(PERMISSION_KEYS.MICROPHONE) as PermissionStatus) || 'prompt';
                 }
 
-                // Check location permission
+                // Check location
                 try {
                     const locationPermission = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
                     newState.location = locationPermission.state as PermissionStatus;
+                    savePermissionState('location', locationPermission.state as PermissionStatus);
                 } catch (e) {
-                    newState.location = 'prompt';
+                    newState.location = (localStorage.getItem(PERMISSION_KEYS.LOCATION) as PermissionStatus) || 'prompt';
                 }
             }
         } catch (error) {
@@ -59,87 +84,96 @@ export const usePermissions = () => {
 
         setPermissions(newState);
         setIsChecking(false);
-    }, []);
+        return newState;
+    }, [savePermissionState]);
 
-    // Request location permission
-    const requestLocationPermission = useCallback(async (): Promise<boolean> => {
+    // Request location permission - triggers system prompt
+    const requestLocationPermission = useCallback(async (): Promise<PermissionStatus> => {
         return new Promise((resolve) => {
             if (!navigator.geolocation) {
-                resolve(false);
+                savePermissionState('location', 'denied');
+                resolve('denied');
                 return;
             }
 
             navigator.geolocation.getCurrentPosition(
                 () => {
-                    setPermissions(prev => ({ ...prev, location: 'granted' }));
-                    resolve(true);
+                    savePermissionState('location', 'granted');
+                    resolve('granted');
                 },
                 (error) => {
-                    if (error.code === 1) {
-                        setPermissions(prev => ({ ...prev, location: 'denied' }));
-                    }
-                    resolve(false);
+                    const status = error.code === 1 ? 'denied' : 'denied';
+                    savePermissionState('location', status);
+                    resolve(status);
                 },
-                { enableHighAccuracy: false, timeout: 5000, maximumAge: 0 }
+                { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
             );
         });
-    }, []);
+    }, [savePermissionState]);
 
-    // Request camera and microphone permissions
-    const requestMediaPermissions = useCallback(async (): Promise<boolean> => {
+    // Request camera and microphone permissions - triggers system prompt
+    const requestMediaPermissions = useCallback(async (): Promise<{ camera: PermissionStatus; microphone: PermissionStatus }> => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: true,
                 audio: true,
             });
 
-            // Stop all tracks immediately - we just needed to trigger the permission prompt
+            // Stop all tracks immediately
             stream.getTracks().forEach(track => track.stop());
 
-            setPermissions(prev => ({
-                ...prev,
-                camera: 'granted',
-                microphone: 'granted',
-            }));
+            savePermissionState('camera', 'granted');
+            savePermissionState('microphone', 'granted');
 
-            return true;
+            return { camera: 'granted', microphone: 'granted' };
         } catch (error: any) {
             console.error('Media permission error:', error);
 
-            if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-                setPermissions(prev => ({
-                    ...prev,
-                    camera: 'denied',
-                    microphone: 'denied',
-                }));
-            }
+            const status: PermissionStatus = error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError'
+                ? 'denied'
+                : 'denied';
 
-            return false;
+            savePermissionState('camera', status);
+            savePermissionState('microphone', status);
+
+            return { camera: status, microphone: status };
         }
-    }, []);
+    }, [savePermissionState]);
 
-    // Request all permissions in sequence
+    // Request all permissions in sequence - triggers system prompts
     const requestAllPermissions = useCallback(async (): Promise<{
-        location: boolean;
-        media: boolean;
+        location: PermissionStatus;
+        camera: PermissionStatus;
+        microphone: PermissionStatus;
     }> => {
-        const locationGranted = await requestLocationPermission();
+        // Request location first
+        const locationStatus = await requestLocationPermission();
 
-        // Small delay between prompts for better UX
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Small delay for better UX
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-        const mediaGranted = await requestMediaPermissions();
+        // Request camera and microphone
+        const mediaStatus = await requestMediaPermissions();
+
+        // Mark that we've requested permissions
+        localStorage.setItem(PERMISSION_KEYS.REQUESTED, 'true');
 
         return {
-            location: locationGranted,
-            media: mediaGranted,
+            location: locationStatus,
+            camera: mediaStatus.camera,
+            microphone: mediaStatus.microphone,
         };
     }, [requestLocationPermission, requestMediaPermissions]);
 
-    // Check permissions on mount
+    // Check if permissions have been requested before
+    const hasRequestedPermissions = useCallback(() => {
+        return localStorage.getItem(PERMISSION_KEYS.REQUESTED) === 'true';
+    }, []);
+
+    // Load stored permissions on mount
     useEffect(() => {
-        checkPermissions();
-    }, [checkPermissions]);
+        loadStoredPermissions();
+    }, [loadStoredPermissions]);
 
     return {
         permissions,
@@ -148,5 +182,7 @@ export const usePermissions = () => {
         requestLocationPermission,
         requestMediaPermissions,
         requestAllPermissions,
+        hasRequestedPermissions,
+        savePermissionState,
     };
 };

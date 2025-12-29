@@ -354,18 +354,28 @@ class VideoCallService {
                 this.agoraClient.on('user-published', async (user, mediaType) => {
                     console.log('🎥 Remote user published:', user.uid, mediaType);
 
-                    // Subscribe to their track
-                    await this.agoraClient!.subscribe(user, mediaType);
+                    try {
+                        // Check if we're still connected before subscribing
+                        if (this.agoraClient?.connectionState !== 'CONNECTED') {
+                            console.warn('⚠️ Cannot subscribe - not connected. State:', this.agoraClient?.connectionState);
+                            return;
+                        }
 
-                    if (mediaType === 'video') {
-                        this.remoteVideoTrack = user.videoTrack || null;
-                        this.updateState({ remoteVideoTrack: this.remoteVideoTrack });
-                    }
-                    if (mediaType === 'audio') {
-                        this.remoteAudioTrack = user.audioTrack || null;
-                        this.updateState({ remoteAudioTrack: this.remoteAudioTrack });
-                        // Play audio automatically
-                        user.audioTrack?.play();
+                        // Subscribe to their track
+                        await this.agoraClient!.subscribe(user, mediaType);
+
+                        if (mediaType === 'video') {
+                            this.remoteVideoTrack = user.videoTrack || null;
+                            this.updateState({ remoteVideoTrack: this.remoteVideoTrack });
+                        }
+                        if (mediaType === 'audio') {
+                            this.remoteAudioTrack = user.audioTrack || null;
+                            this.updateState({ remoteAudioTrack: this.remoteAudioTrack });
+                            // Play audio automatically
+                            user.audioTrack?.play();
+                        }
+                    } catch (error: any) {
+                        console.error('❌ Failed to subscribe to remote user:', error.message);
                     }
                 });
 
@@ -409,15 +419,30 @@ class VideoCallService {
             // Use appId from credentials or fallback to env
             const appId = credentials.appId || AGORA_APP_ID;
 
-            // Join the channel
-            await this.agoraClient.join(
-                appId,
-                credentials.channelName,
-                credentials.token,
-                credentials.uid
-            );
+            if (!appId) {
+                throw new Error('Agora App ID is missing. Please check your environment configuration.');
+            }
 
-            console.log('🎥 Joined Agora channel successfully');
+            // Join the channel
+            try {
+                await this.agoraClient.join(
+                    appId,
+                    credentials.channelName,
+                    credentials.token,
+                    credentials.uid
+                );
+                console.log('🎥 Joined Agora channel successfully');
+            } catch (joinError: any) {
+                console.error('❌ Failed to join Agora channel:', joinError);
+
+                if (joinError.code === 'INVALID_PARAMS') {
+                    throw new Error('Invalid Agora credentials. Please contact support.');
+                } else if (joinError.code === 'NETWORK_ERROR') {
+                    throw new Error('Network error. Please check your internet connection.');
+                } else {
+                    throw new Error(`Failed to join video call: ${joinError.message || 'Unknown error'}`);
+                }
+            }
 
             // Publish local tracks
             if (this.localAudioTrack && this.localVideoTrack) {

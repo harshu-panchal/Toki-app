@@ -8,6 +8,7 @@ import { MaleTopNavbar } from '../components/MaleTopNavbar';
 import { MaleSidebar } from '../components/MaleSidebar';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
 import { LocationPromptModal } from '../../../shared/components/LocationPromptModal';
+import { PermissionPrompt } from '../../../shared/components/PermissionPrompt';
 import { usePermissions } from '../../../core/hooks/usePermissions';
 import userService from '../../../core/services/user.service';
 import { useTranslation } from '../../../core/hooks/useTranslation';
@@ -45,6 +46,7 @@ export const MaleDashboard = () => {
   const { chats: rawChats, isLoading: isChatsLoading, refreshChats } = useOptimizedChatList();
 
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
@@ -57,18 +59,10 @@ export const MaleDashboard = () => {
     refreshChats();
     fetchNearbyUsers();
 
-    // Trigger system permission prompts on first app open
-    const requestPermissions = async () => {
-      if (!hasRequestedPermissions()) {
-        // Small delay to let UI settle
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // This will trigger native system prompts
-        await requestAllPermissions();
-      }
-    };
-
-    requestPermissions();
+    // Show permission prompt on first app open
+    if (!hasRequestedPermissions()) {
+      setTimeout(() => setShowPermissionPrompt(true), 1000);
+    }
   }, []);
 
   const fetchNearbyUsers = async () => {
@@ -185,6 +179,20 @@ export const MaleDashboard = () => {
 
   return (
     <div className="relative flex h-full min-h-screen w-full flex-col bg-gradient-to-br from-pink-50 via-rose-50/30 to-white dark:from-[#1a0f14] dark:via-[#2d1a24] dark:to-[#0a0a0a] overflow-x-hidden pb-24">
+      {/* Permission Prompt - Shows on first app open */}
+      {showPermissionPrompt && (
+        <PermissionPrompt
+          onRequestPermissions={async () => {
+            await requestAllPermissions();
+            setShowPermissionPrompt(false);
+          }}
+          onDismiss={() => {
+            localStorage.setItem('matchmint_permissions_requested', 'true');
+            setShowPermissionPrompt(false);
+          }}
+        />
+      )}
+
       {showLocationPrompt && (
         <LocationPromptModal
           onSave={handleLocationSave}

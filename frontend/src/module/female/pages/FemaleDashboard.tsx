@@ -11,6 +11,7 @@ import { FemaleSidebar } from '../components/FemaleSidebar';
 import { QuickActionsGrid } from '../components/QuickActionsGrid';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
 import { LocationPromptModal } from '../../../shared/components/LocationPromptModal';
+import { PermissionPrompt } from '../../../shared/components/PermissionPrompt';
 import { usePermissions } from '../../../core/hooks/usePermissions';
 import userService from '../../../core/services/user.service';
 import { calculateDistance, formatDistance, areCoordinatesValid } from '../../../utils/distanceCalculator';
@@ -21,6 +22,7 @@ const FemaleDashboardContent = () => {
   const { t } = useTranslation();
   const [dashboardData, setDashboardData] = useState<FemaleDashboardData | null>(null);
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
@@ -40,18 +42,10 @@ const FemaleDashboardContent = () => {
     window.scrollTo(0, 0);
     fetchDashboardData();
 
-    // Trigger system permission prompts on first app open
-    const requestPermissions = async () => {
-      if (!hasRequestedPermissions()) {
-        // Small delay to let UI settle
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // This will trigger native system prompts
-        await requestAllPermissions();
-      }
-    };
-
-    requestPermissions();
+    // Show permission prompt on first app open
+    if (!hasRequestedPermissions()) {
+      setTimeout(() => setShowPermissionPrompt(true), 1000);
+    }
   }, []);
 
   const fetchDashboardData = async () => {
@@ -163,6 +157,20 @@ const FemaleDashboardContent = () => {
 
   return (
     <div className="relative flex w-full flex-col bg-background-light dark:bg-background-dark overflow-x-hidden pb-20">
+      {/* Permission Prompt - Shows on first app open */}
+      {showPermissionPrompt && (
+        <PermissionPrompt
+          onRequestPermissions={async () => {
+            await requestAllPermissions();
+            setShowPermissionPrompt(false);
+          }}
+          onDismiss={() => {
+            localStorage.setItem('matchmint_permissions_requested', 'true');
+            setShowPermissionPrompt(false);
+          }}
+        />
+      )}
+
       {showLocationPrompt && (
         <LocationPromptModal
           onSave={handleLocationSave}

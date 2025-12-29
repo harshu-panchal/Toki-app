@@ -150,9 +150,10 @@ class VideoCallService {
         // Pre-initialize local media
         try {
             await this.initializeLocalMedia();
-        } catch (error) {
-            this.updateState({ status: 'idle', error: 'Camera/Microphone access denied' });
-            throw error;
+        } catch (error: any) {
+            const errorMsg = error.message || 'Camera/Microphone access denied';
+            this.updateState({ status: 'idle', error: errorMsg });
+            throw new Error(errorMsg);
         }
 
         // Send call request via socket
@@ -177,9 +178,10 @@ class VideoCallService {
         // Initialize local media
         try {
             await this.initializeLocalMedia();
-        } catch (error) {
-            this.updateState({ status: 'idle', error: 'Camera/Microphone access denied' });
-            throw error;
+        } catch (error: any) {
+            const errorMsg = error.message || 'Camera/Microphone access denied';
+            this.updateState({ status: 'idle', error: errorMsg });
+            throw new Error(errorMsg);
         }
 
         // Accept call via socket - backend will send Agora credentials
@@ -296,17 +298,39 @@ class VideoCallService {
         try {
             console.log('📹 Initializing local media with Agora...');
 
+            // First, request permissions explicitly (critical for Android)
+            try {
+                const permissionStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+                // Stop immediately - we just needed to trigger permission
+                permissionStream.getTracks().forEach(track => track.stop());
+                console.log('✅ Camera/Mic permissions granted');
+            } catch (permError) {
+                console.error('❌ Permission denied:', permError);
+                throw new Error('Camera and microphone access denied. Please enable in settings.');
+            }
+
+            // Small delay for Android to release resources
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             // Create local audio and video tracks
             [this.localAudioTrack, this.localVideoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
-                {}, // Audio config
+                {
+                    AEC: true, // Acoustic Echo Cancellation
+                    ANS: true, // Automatic Noise Suppression
+                    AGC: true, // Automatic Gain Control
+                },
                 {
                     encoderConfig: {
                         width: 640,
                         height: 480,
                         frameRate: 24,
                         bitrateMax: 1000,
-                    }
-                } // Video config
+                    },
+                    optimizationMode: 'motion', // Better for video calls
+                }
             );
 
             this.updateState({
@@ -315,8 +339,18 @@ class VideoCallService {
             });
 
             console.log('📹 Local media initialized successfully');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to get local media:', error);
+
+            // Provide user-friendly error messages
+            if (error.message?.includes('denied') || error.message?.includes('Permission')) {
+                throw new Error('Camera/Microphone permission denied. Please enable in your device settings.');
+            } else if (error.message?.includes('NotFoundError') || error.message?.includes('not found')) {
+                throw new Error('Camera or microphone not found on your device.');
+            } else if (error.message?.includes('NotReadableError') || error.message?.includes('not start')) {
+                throw new Error('Camera is being used by another app. Please close other apps and try again.');
+            }
+
             throw error;
         }
     }

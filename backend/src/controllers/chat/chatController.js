@@ -86,7 +86,8 @@ export const getMyChatList = async (req, res, next) => {
                 intimacy: (() => {
                     const maleParticipant = chat.participants.find(p => p.role === 'male');
                     const maleUserId = maleParticipant?.userId._id.toString();
-                    const maleMessageCount = maleUserId ? (chat.messageCountByUser?.get(maleUserId) || 0) : 0;
+                    // When using lean(), Map becomes a plain object
+                    const maleMessageCount = maleUserId ? (chat.messageCountByUser?.[maleUserId] || 0) : 0;
                     return getLevelInfo(maleMessageCount);
                 })(),
             };
@@ -186,7 +187,8 @@ export const getOrCreateChat = async (req, res, next) => {
             intimacy: (() => {
                 const maleParticipant = chat.participants.find(p => p.role === 'male');
                 const maleUserId = maleParticipant?.userId._id.toString();
-                const maleMessageCount = maleUserId ? (chat.messageCountByUser?.get(maleUserId) || 0) : 0;
+                // When using lean(), Map becomes a plain object
+                const maleMessageCount = maleUserId ? (chat.messageCountByUser?.[maleUserId] || 0) : 0;
                 return getLevelInfo(maleMessageCount);
             })(),
         };
@@ -252,7 +254,8 @@ export const getChatById = async (req, res, next) => {
             intimacy: (() => {
                 const maleParticipant = chat.participants.find(p => p.role === 'male');
                 const maleUserId = maleParticipant?.userId._id.toString();
-                const maleMessageCount = maleUserId ? (chat.messageCountByUser?.get(maleUserId) || 0) : 0;
+                // When using lean(), Map becomes a plain object
+                const maleMessageCount = maleUserId ? (chat.messageCountByUser?.[maleUserId] || 0) : 0;
                 return getLevelInfo(maleMessageCount);
             })(),
         };

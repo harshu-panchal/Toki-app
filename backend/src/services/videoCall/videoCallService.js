@@ -20,7 +20,7 @@ import { BadRequestError, NotFoundError, ForbiddenError } from '../../utils/erro
 
 // Environment config
 const VIDEO_CALL_DURATION = parseInt(process.env.VIDEO_CALL_DURATION_SECONDS, 10) || 300;
-const CALL_TIMEOUT = parseInt(process.env.CALL_CONNECTION_TIMEOUT_SECONDS, 10) || 20;
+const CALL_TIMEOUT = parseInt(process.env.CALL_CONNECTION_TIMEOUT_SECONDS, 10) || 45;
 
 // Helper function to get video call cost from AppSettings
 const getVideoCallCost = async () => {

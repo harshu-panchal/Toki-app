@@ -199,12 +199,16 @@ export const markCallConnected = async (callId) => {
             throw new NotFoundError('Call not found');
         }
 
+        if (videoCall.status === 'connected') {
+            return videoCall;
+        }
+
         if (videoCall.status !== 'accepted') {
             throw new BadRequestError('Call must be accepted before marking as connected');
         }
 
         if (videoCall.billingStatus !== 'locked') {
-            throw new BadRequestError('Call billing already processed');
+            return videoCall;
         }
 
         // Update call status
@@ -279,6 +283,12 @@ export const endCall = async (callId, endReason, endedBy) => {
         if (endReason === 'rejected') {
             finalStatus = 'rejected';
         } else if (endReason === 'connection_failed') {
+            // CRITICAL: If the call is already connected, it cannot "fail to connect"
+            // Ignore late-arriving connection failure signals
+            if (videoCall.status === 'connected') {
+                logger.warn(`⚠️ Ignoring connection_failed for already connected call: ${callId}`);
+                return videoCall;
+            }
             finalStatus = 'failed';
         } else if (endReason === 'timeout') {
             finalStatus = 'missed';

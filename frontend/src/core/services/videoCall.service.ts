@@ -345,6 +345,11 @@ class VideoCallService {
                 }
             );
 
+            // Ensure video track is enabled and playing
+            if (this.localVideoTrack) {
+                await this.localVideoTrack.setEnabled(true);
+            }
+
             this.updateState({
                 localVideoTrack: this.localVideoTrack,
                 localAudioTrack: this.localAudioTrack,
@@ -489,6 +494,10 @@ class VideoCallService {
             // Publish local tracks
             try {
                 if (this.localAudioTrack && this.localVideoTrack) {
+                    // Force enable before publish to ensure visibility
+                    await this.localVideoTrack.setEnabled(true);
+                    await this.localAudioTrack.setEnabled(true);
+
                     await this.agoraClient.publish([this.localAudioTrack, this.localVideoTrack]);
                     console.log('🎥 Published local tracks');
                 }

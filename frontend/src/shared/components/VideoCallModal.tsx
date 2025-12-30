@@ -7,6 +7,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useVideoCall } from '../../core/context/VideoCallContext';
+import { ReconnectionPopup } from './ReconnectionPopup';
+import { WaitingForRejoin } from './WaitingForRejoin';
 
 // Format time as mm:ss
 const formatTime = (seconds: number): string => {
@@ -23,6 +25,7 @@ export const VideoCallModal = () => {
         acceptCall,
         rejectCall,
         endCall,
+        rejoinCall,
         toggleMute,
         toggleCamera,
         callPrice,
@@ -356,7 +359,7 @@ export const VideoCallModal = () => {
                     </div>
 
                     {/* Muted indicator */}
-                    {callState.isMuted && (
+                    {callState.isMicOff && (
                         <div className="absolute top-2 left-2 bg-red-500/80 rounded-full px-2 py-1 flex items-center gap-1">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
@@ -373,10 +376,10 @@ export const VideoCallModal = () => {
                     {/* Mute toggle */}
                     <button
                         onClick={toggleMute}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${callState.isMuted ? 'bg-red-500 text-white' : 'bg-gray-700 text-white hover:bg-gray-600'
+                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${callState.isMicOff ? 'bg-red-500 text-white' : 'bg-gray-700 text-white hover:bg-gray-600'
                             }`}
                     >
-                        {callState.isMuted ? (
+                        {callState.isMicOff ? (
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
                                 <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
@@ -391,7 +394,7 @@ export const VideoCallModal = () => {
 
                     {/* Camera toggle */}
                     <button
-                        onClick={toggleCamera}
+                        onClick={() => toggleCamera(!callState.isCameraOff)}
                         className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${callState.isCameraOff ? 'bg-red-500 text-white' : 'bg-gray-700 text-white hover:bg-gray-600'
                             }`}
                     >
@@ -436,6 +439,26 @@ export const VideoCallModal = () => {
                     )}
                 </div>
             </div>
+        );
+    }
+
+    // Reconnection Popup - Shows when user is disconnected
+    if (callState.status === 'disconnected') {
+        return (
+            <ReconnectionPopup
+                isVisible={true}
+                hasReconnected={callState.hasReconnected}
+                remainingTime={remainingTime}
+                onRejoin={rejoinCall}
+                onEndCall={endCall}
+            />
+        );
+    }
+
+    // Waiting for Rejoin Overlay - Shows when reconnecting
+    if (callState.status === 'reconnecting') {
+        return (
+            <WaitingForRejoin isVisible={true} />
         );
     }
 

@@ -22,12 +22,18 @@ class AgoraVideoCallService {
     private localAudioTrack: IMicrophoneAudioTrack | null = null;
     private localVideoTrack: ICameraVideoTrack | null = null;
     private remoteUsers: Map<number, IAgoraRTCRemoteUser> = new Map();
+    private currentCredentials: AgoraCredentials | null = null;
 
     // Callbacks for UI updates
     public onLocalVideoReady: ((track: ICameraVideoTrack) => void) | null = null;
     public onRemoteUserJoined: ((user: IAgoraRTCRemoteUser) => void) | null = null;
     public onRemoteUserLeft: ((uid: number) => void) | null = null;
     public onRemoteVideoReady: ((user: IAgoraRTCRemoteUser) => void) | null = null;
+
+    // Reconnection callbacks
+    public onConnectionLost: (() => void) | null = null;
+    public onReconnecting: (() => void) | null = null;
+    public onReconnected: (() => void) | null = null;
 
     /**
      * Initialize Agora client
@@ -96,6 +102,24 @@ class AgoraVideoCallService {
         // Handle connection state changes
         this.client.on('connection-state-change', (curState, prevState, reason) => {
             console.log('🎥 Connection state:', prevState, '->', curState, 'Reason:', reason);
+
+            // Handle reconnecting state
+            if (curState === 'RECONNECTING') {
+                console.log('⚠️ Connection lost, attempting to reconnect...');
+                this.onReconnecting?.();
+            }
+
+            // Handle disconnected state
+            if (curState === 'DISCONNECTED' && prevState === 'RECONNECTING') {
+                console.log('❌ Reconnection failed, connection lost');
+                this.onConnectionLost?.();
+            }
+
+            // Handle successful reconnection
+            if (curState === 'CONNECTED' && prevState === 'RECONNECTING') {
+                console.log('✅ Successfully reconnected');
+                this.onReconnected?.();
+            }
         });
     }
 
@@ -112,6 +136,9 @@ class AgoraVideoCallService {
         console.log('   UID:', credentials.uid);
 
         try {
+            // Store credentials for potential rejoin
+            this.currentCredentials = credentials;
+
             // Join the channel
             await this.client!.join(
                 credentials.appId,
@@ -130,6 +157,40 @@ class AgoraVideoCallService {
         } catch (error: any) {
             console.error('❌ Failed to join channel:', error);
             throw new Error(`Failed to join video call: ${error.message}`);
+        }
+    }
+
+    /**
+     * Rejoin the channel (for reconnection)
+     */
+    async rejoinChannel(): Promise<void> {
+        if (!this.currentCredentials) {
+            throw new Error('No credentials available for rejoin');
+        }
+
+        console.log('🔄 Rejoining channel...');
+
+        try {
+            // If we still have local tracks, just rejoin
+            if (this.localAudioTrack && this.localVideoTrack) {
+                await this.client!.join(
+                    this.currentCredentials.appId,
+                    this.currentCredentials.channelName,
+                    this.currentCredentials.token,
+                    this.currentCredentials.uid
+                );
+
+                // Republish tracks
+                await this.publishLocalTracks();
+            } else {
+                // Full rejoin with new tracks
+                await this.joinChannel(this.currentCredentials);
+            }
+
+            console.log('✅ Successfully rejoined channel');
+        } catch (error: any) {
+            console.error('❌ Failed to rejoin channel:', error);
+            throw new Error(`Failed to rejoin: ${error.message}`);
         }
     }
 

@@ -103,17 +103,6 @@ export const staticTranslations: Record<string, Record<'en' | 'hi', string>> = {
     'End Call': { en: 'End Call', hi: 'कॉल समाप्त करें' },
     'Accept': { en: 'Accept', hi: 'स्वीकार करें' },
     'Reject': { en: 'Reject', hi: 'अस्वीकार करें' },
-
-    // Video Call Reconnection
-    'Connection Lost': { en: 'Connection Lost', hi: 'कनेक्शन टूट गया' },
-    'Reconnecting': { en: 'Reconnecting...', hi: 'फिर से कनेक्ट हो रहा है...' },
-    'Rejoin Call': { en: 'Rejoin Call', hi: 'फिर से कॉल में शामिल हों' },
-    'Waiting for user to rejoin': { en: 'Waiting for user to rejoin...', hi: 'उपयोगकर्ता के फिर से शामिल होने की प्रतीक्षा में...' },
-    'Call Disconnected': { en: 'Call Disconnected', hi: 'कॉल डिस्कनेक्ट हो गई' },
-    'You can rejoin the call': { en: 'You can rejoin the call', hi: 'आप कॉल में फिर से शामिल हो सकते हैं' },
-    'One-time rejoin available': { en: 'One-time rejoin available', hi: 'एक बार फिर से शामिल हो सकते हैं' },
-    'Already rejoined once': { en: 'You have already rejoined once', hi: 'आप पहले ही एक बार शामिल हो चुके हैं' },
-    'Time Remaining': { en: 'Time Remaining', hi: 'शेष समय' },
 };
 
 /**

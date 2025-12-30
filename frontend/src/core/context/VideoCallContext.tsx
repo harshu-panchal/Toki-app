@@ -8,7 +8,7 @@ import agoraVideoCallService from '../services/agoraVideoCall.service';
 import type { ICameraVideoTrack } from 'agora-rtc-sdk-ng';
 
 interface VideoCallState {
-    status: 'idle' | 'requesting' | 'ringing' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'ended';
+    status: 'idle' | 'requesting' | 'ringing' | 'connecting' | 'connected' | 'ended';
     callId: string | null;
     remoteUserId: string | null;
     remoteUserName: string | null;
@@ -18,7 +18,6 @@ interface VideoCallState {
     remoteVideoTrack: any | null;
     isMicOff: boolean;
     isCameraOff: boolean;
-    hasReconnected: boolean; // Track if user has already used their one-time rejoin
     error: string | null;
 }
 
@@ -35,7 +34,6 @@ interface VideoCallContextType {
     acceptCall: () => Promise<void>;
     rejectCall: () => Promise<void>;
     endCall: () => Promise<void>;
-    rejoinCall: () => Promise<void>; // New: Rejoin after disconnection
     toggleMicrophone: (enabled: boolean) => Promise<void>;
     toggleCamera: (enabled: boolean) => Promise<void>;
     toggleMute: () => Promise<void>; // Alias for toggleMicrophone
@@ -58,13 +56,11 @@ export const VideoCallProvider: React.FC<{ children: ReactNode }> = ({ children 
         remoteVideoTrack: null,
         isMicOff: false,
         isCameraOff: false,
-        hasReconnected: false,
         error: null,
     });
 
     // Call duration timer (5 minutes = 300 seconds)
-    const [remainingTime] = useState(300);
-    // const [remainingTime, setRemainingTime] = useState(300); // TODO: Implement countdown timer
+    const [remainingTime, setRemainingTime] = useState(300);
 
     // Setup Agora callbacks
     useEffect(() => {
@@ -81,22 +77,6 @@ export const VideoCallProvider: React.FC<{ children: ReactNode }> = ({ children 
         agoraVideoCallService.onRemoteUserLeft = (uid) => {
             console.log('👋 Remote user left:', uid);
             setCallState(prev => ({ ...prev, remoteVideoTrack: null }));
-        };
-
-        // Reconnection callbacks
-        agoraVideoCallService.onReconnecting = () => {
-            console.log('⚠️ Connection lost, attempting to reconnect...');
-            setCallState(prev => ({ ...prev, status: 'reconnecting' }));
-        };
-
-        agoraVideoCallService.onConnectionLost = () => {
-            console.log('❌ Connection lost permanently');
-            setCallState(prev => ({ ...prev, status: 'disconnected' }));
-        };
-
-        agoraVideoCallService.onReconnected = () => {
-            console.log('✅ Reconnected successfully');
-            setCallState(prev => ({ ...prev, status: 'connected' }));
         };
     }, []);
 
@@ -116,7 +96,6 @@ export const VideoCallProvider: React.FC<{ children: ReactNode }> = ({ children 
                 remoteVideoTrack: null,
                 isMicOff: false,
                 isCameraOff: false,
-                hasReconnected: false,
                 error: null,
             });
         });
@@ -164,7 +143,6 @@ export const VideoCallProvider: React.FC<{ children: ReactNode }> = ({ children 
                     remoteVideoTrack: null,
                     isMicOff: false,
                     isCameraOff: false,
-                    hasReconnected: false,
                     error: null,
                 });
             }, 2000);
@@ -187,7 +165,6 @@ export const VideoCallProvider: React.FC<{ children: ReactNode }> = ({ children 
                     remoteVideoTrack: null,
                     isMicOff: false,
                     isCameraOff: false,
-                    hasReconnected: false,
                     error: null,
                 });
             }, 2000);
@@ -232,7 +209,6 @@ export const VideoCallProvider: React.FC<{ children: ReactNode }> = ({ children 
                 remoteVideoTrack: null,
                 isMicOff: false,
                 isCameraOff: false,
-                hasReconnected: false,
                 error: null,
             });
 
@@ -274,7 +250,6 @@ export const VideoCallProvider: React.FC<{ children: ReactNode }> = ({ children 
                 remoteVideoTrack: null,
                 isMicOff: false,
                 isCameraOff: false,
-                hasReconnected: false,
                 error: null,
             });
         }
@@ -301,39 +276,9 @@ export const VideoCallProvider: React.FC<{ children: ReactNode }> = ({ children 
             remoteVideoTrack: null,
             isMicOff: false,
             isCameraOff: false,
-            hasReconnected: false,
             error: null,
         });
     }, [callState.callId]);
-
-    // Rejoin call (one-time reconnection)
-    const rejoinCall = useCallback(async (): Promise<void> => {
-        console.log('🔄 Attempting to rejoin call...');
-
-        if (callState.hasReconnected) {
-            console.error('❌ Already used one-time rejoin');
-            setCallState(prev => ({ ...prev, error: 'You have already rejoined once' }));
-            return;
-        }
-
-        if (callState.status !== 'disconnected') {
-            console.error('❌ Can only rejoin when disconnected');
-            return;
-        }
-
-        try {
-            setCallState(prev => ({ ...prev, status: 'connecting', hasReconnected: true }));
-
-            // Rejoin the Agora channel
-            await agoraVideoCallService.rejoinChannel();
-
-            setCallState(prev => ({ ...prev, status: 'connected' }));
-            console.log('✅ Successfully rejoined call');
-        } catch (error: any) {
-            console.error('❌ Failed to rejoin:', error);
-            setCallState(prev => ({ ...prev, status: 'ended', error: error.message }));
-        }
-    }, [callState.hasReconnected, callState.status]);
 
     // Toggle microphone
     const toggleMicrophone = useCallback(async (enabled: boolean): Promise<void> => {
@@ -361,7 +306,6 @@ export const VideoCallProvider: React.FC<{ children: ReactNode }> = ({ children 
                 acceptCall,
                 rejectCall,
                 endCall,
-                rejoinCall,
                 toggleMicrophone,
                 toggleCamera,
                 toggleMute,

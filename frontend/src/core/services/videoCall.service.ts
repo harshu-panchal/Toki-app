@@ -373,6 +373,9 @@ class VideoCallService {
 
             // Create Agora client if not exists
             if (!this.agoraClient) {
+                // Set area to India to optimize connection for Indian users
+                AgoraRTC.setArea({ areaCode: ['INDIA'] } as any);
+
                 this.agoraClient = AgoraRTC.createClient({
                     mode: 'rtc',
                     codec: 'vp8'

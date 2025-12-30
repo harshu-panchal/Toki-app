@@ -375,10 +375,10 @@ export const VideoCallModal = () => {
                                 </div>
                             </div>
 
-                            {/* Floating Local PiP (Fullscreen mode) */}
+                            {/* Floating PiP (Fullscreen mode) - At Bottom Right */}
                             <button
                                 onClick={handleToggleSwap}
-                                className="absolute bottom-36 right-8 w-36 h-52 rounded-[2rem] overflow-hidden bg-gray-900 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.8)] border-2 border-white/40 z-20 transition-all hover:scale-105 active:scale-95 group ring-0 hover:ring-4 ring-white/10"
+                                className="absolute bottom-6 right-6 w-32 h-44 rounded-3xl overflow-hidden bg-gray-900 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.8)] border-2 border-white/40 z-20 transition-all hover:scale-105 active:scale-95 group ring-0 hover:ring-4 ring-white/10"
                                 title="Click to Swap Video"
                             >
                                 <div
@@ -508,10 +508,10 @@ export const VideoCallModal = () => {
                             style={{ transform: isSwapped ? 'scaleX(-1)' : '' }}
                         />
 
-                        {/* PiP Video in Mini Mode */}
+                        {/* PiP Video in Mini Mode - At Bottom Right */}
                         <button
                             onClick={handleToggleSwap}
-                            className="absolute bottom-4 right-4 w-32 h-44 rounded-3xl overflow-hidden bg-gray-950 shadow-2xl border-2 border-white/30 z-10 transition-transform hover:scale-105 active:scale-95 group cursor-pointer ring-0 hover:ring-2 ring-white/10"
+                            className="absolute bottom-3 right-3 w-24 h-32 rounded-2xl overflow-hidden bg-gray-950 shadow-2xl border-2 border-white/30 z-10 transition-transform hover:scale-105 active:scale-95 group cursor-pointer ring-0 hover:ring-2 ring-white/10"
                             title="Click to Swap"
                         >
                             <div

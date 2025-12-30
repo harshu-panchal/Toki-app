@@ -550,6 +550,12 @@ class VideoCallService {
     // ==================== SOCKET EVENT HANDLERS ====================
 
     private handleIncomingCall(data: any): void {
+        // Ignore if we are already handling this call or already in another call
+        if (this.state.callId === data.callId || this.state.status !== 'idle') {
+            console.log('📞 Ignoring duplicate or overlapping incoming call:', data.callId);
+            return;
+        }
+
         console.log('📞 Incoming call:', data);
 
         // Play ringtone

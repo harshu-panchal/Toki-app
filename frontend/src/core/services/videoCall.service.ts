@@ -583,19 +583,22 @@ class VideoCallService {
         this.isJoining = false;
 
         // 1. Stop and close local tracks
-        if (this.localAudioTrack) {
+        const audioTrack = this.localAudioTrack;
+        if (audioTrack) {
             try {
-                this.localAudioTrack.stop();
-                this.localAudioTrack.close();
+                audioTrack.stop();
+                audioTrack.close();
             } catch (e) {
                 console.warn('Error stopping audio track:', e);
             }
             this.localAudioTrack = null;
         }
-        if (this.localVideoTrack) {
+
+        const videoTrack = this.localVideoTrack;
+        if (videoTrack) {
             try {
-                this.localVideoTrack.stop();
-                this.localVideoTrack.close();
+                videoTrack.stop();
+                videoTrack.close();
             } catch (e) {
                 console.warn('Error stopping video track:', e);
             }
@@ -603,17 +606,21 @@ class VideoCallService {
         }
 
         // 2. Leave Agora channel and fully destroy client
-        if (this.agoraClient) {
+        const client = this.agoraClient;
+        if (client) {
             try {
-                const state = this.agoraClient.connectionState;
+                const state = client.connectionState;
                 if (state !== 'DISCONNECTED') {
-                    await this.agoraClient.leave();
+                    await client.leave();
                 }
-                this.agoraClient.removeAllListeners();
+                client.removeAllListeners();
             } catch (e) {
                 console.warn('Error leaving Agora channel:', e);
             }
-            this.agoraClient = null;
+            // Only nullify if it's still the same client
+            if (this.agoraClient === client) {
+                this.agoraClient = null;
+            }
         }
 
         // 3. Reset tracks

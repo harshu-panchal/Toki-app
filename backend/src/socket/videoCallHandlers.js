@@ -16,57 +16,47 @@ import logger from '../utils/logger.js';
 import User from '../models/User.js';
 
 // In-memory store for active calls and timers
-const activeCallTimers = new Map(); // callId -> { timer, startTime }
+const activeCallTimers = new Map(); // callId -> { timer, startTime, ... }
+const processingCalls = new Set(); // To prevent concurrent processing of same callId
 
 /**
- * Helper to get user role (simplified)
+ * Helper: Safely clear and set a timer for a call
  */
-const getUserLabel = async (userId) => {
-    try {
-        const user = await User.findById(userId);
-        if (!user) return 'User';
-        return user.gender === 'male' ? 'MALE' : 'FEMALE';
-    } catch (e) {
-        return 'User';
+const setCallTimer = (callId, type, durationMs, callback) => {
+    // 1. Clear ANY existing timer for this call ID (duration or interruption)
+    const existing = activeCallTimers.get(callId);
+    if (existing) {
+        clearTimeout(existing.timer);
+        activeCallTimers.delete(callId);
     }
-};
+    const interKey = `${callId}_interruption`;
+    const existingInter = activeCallTimers.get(interKey);
+    if (existingInter) {
+        clearTimeout(existingInter.timer);
+        activeCallTimers.delete(interKey);
+    }
 
-export const setupVideoCallHandlers = (socket, io, userId) => {
-    // ====================
-    // DEBUG LOG BROADCASTER
-    // ====================
-    socket.on('call:debug-log', async (data) => {
-        try {
-            const { callId, message, level = 'info' } = data;
+    // 2. Set new timer
+    const timer = setTimeout(callback, durationMs);
 
-            // Validate call ownership (basic check)
-            const call = await videoCallService.getCall(callId);
-            if (!call) return;
-
-            const isParticipant = call.callerId.toString() === userId || call.receiverId.toString() === userId;
-            if (!isParticipant) return;
-
-            const role = await getUserLabel(userId);
-            const prefix = `[${role}]`;
-
-            const logData = {
-                callId,
-                message: `${prefix} ${message}`,
-                level,
-                timestamp: new Date().toISOString()
-            };
-
-            // Broadcast to both participants
-            io.to(call.callerId.toString()).emit('call:debug-received', logData);
-            io.to(call.receiverId.toString()).emit('call:debug-received', logData);
-
-            // Also log to backend terminal for full visibility
-            logger.info(`📺 DebugSync: ${logData.message}`);
-        } catch (error) {
-            // Silently ignore log errors
-        }
+    // 3. Store reference
+    activeCallTimers.set(type === 'interruption' ? interKey : callId, {
+        timer,
+        type,
+        startTime: Date.now(),
+        durationMs
     });
 
+    return timer;
+};
+
+/**
+ * Setup video call handlers for a socket connection
+ * @param {Socket} socket - Socket.IO socket instance
+ * @param {Server} io - Socket.IO server instance
+ * @param {string} userId - Authenticated user ID
+ */
+export const setupVideoCallHandlers = (socket, io, userId) => {
     // Helper: Validate call belongs to this user
     const validateCallOwnership = async (callId) => {
         const call = await videoCallService.getCall(callId);
@@ -150,6 +140,14 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
     socket.on('call:accept', async (data) => {
         try {
             const { callId } = data;
+
+            // CONCURRENCY GUARD: Prevent multiple accept processing
+            if (processingCalls.has(`accept_${callId}`)) {
+                logger.warn(`Ignoring duplicate accept request for ${callId}`);
+                return;
+            }
+            processingCalls.add(`accept_${callId}`);
+
             logger.info(`📞 Call accepted: ${callId}`);
 
             // Clear ringing timeout
@@ -208,6 +206,8 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
         } catch (error) {
             logger.error(`Call accept error: ${error.message}`);
             socket.emit('call:error', { message: error.message });
+        } finally {
+            processingCalls.delete(`accept_${data.callId}`);
         }
     });
 
@@ -252,7 +252,22 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
     socket.on('call:connected', async (data) => {
         try {
             const { callId } = data;
+
+            // CONCURRENCY GUARD: Prevent multiple connection processing
+            if (processingCalls.has(`connect_${callId}`)) {
+                logger.warn(`Ignoring duplicate connect notification for ${callId}`);
+                return;
+            }
+            processingCalls.add(`connect_${callId}`);
+
             logger.info(`📞 WebRTC connected: ${callId}`);
+
+            // If a timer ALREADY exists for this callId (and it's a duration timer), don't restart it
+            const existingTimer = activeCallTimers.get(callId);
+            if (existingTimer && existingTimer.type === 'duration') {
+                logger.info(`Timer already active for call ${callId}, skipping restart`);
+                return;
+            }
 
             // Mark call as connected (credits coins to receiver)
             const videoCall = await videoCallService.markCallConnected(callId);
@@ -262,34 +277,27 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
 
             // Start 5-minute call timer (AUTHORITATIVE)
             const duration = videoCall.callDurationSeconds * 1000;
-            const timerId = setTimeout(async () => {
+            setCallTimer(callId, 'duration', duration, async () => {
                 try {
                     logger.info(`⏰ Call timer expired: ${callId}`);
                     await videoCallService.endCall(callId, 'timer_expired', null);
 
-                    // Notify both users using rooms
-                    io.to(callerId).emit('call:force-end', {
-                        callId,
-                        reason: 'timer_expired',
-                    });
-                    io.to(receiverId).emit('call:force-end', {
-                        callId,
-                        reason: 'timer_expired',
-                    });
+                    const forceEndData = { callId, reason: 'timer_expired' };
+                    io.to(callerId).emit('call:force-end', forceEndData);
+                    io.to(receiverId).emit('call:force-end', forceEndData);
 
                     activeCallTimers.delete(callId);
                 } catch (error) {
                     logger.error(`Call timer end error: ${error.message}`);
                 }
-            }, duration);
-
-            activeCallTimers.set(callId, {
-                timer: timerId,
-                type: 'duration',
-                startTime: Date.now(),
-                callerId,
-                receiverId,
             });
+
+            // Update timer data with role info for the helper
+            const tData = activeCallTimers.get(callId);
+            if (tData) {
+                tData.callerId = callerId;
+                tData.receiverId = receiverId;
+            }
 
             // Notify both users that call is now active
             const callStartData = {
@@ -303,6 +311,8 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
         } catch (error) {
             logger.error(`Call connected error: ${error.message}`);
             socket.emit('call:error', { message: error.message });
+        } finally {
+            processingCalls.delete(`connect_${data.callId}`);
         }
     });
 
@@ -340,7 +350,7 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                 const elapsedMs = Date.now() - timerData.startTime;
                 remainingTime = Math.max(0, call.callDurationSeconds - Math.floor(elapsedMs / 1000));
 
-                // Pause the timer
+                // PAUSE: Use our helper logic implicitly by manually clearing here for precision
                 clearTimeout(timerData.timer);
                 activeCallTimers.delete(callId);
             }
@@ -381,36 +391,32 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                     disconnectedUserId: userId,
                 });
 
-                // Start INTERRUPTION TIMEOUT (60s grace period)
-                const interruptionTimerId = setTimeout(async () => {
+                // Start INTERRUPTION TIMEOUT (60s grace period) using helper
+                setCallTimer(callId, 'interruption', 60000, async () => {
                     try {
                         logger.info(`❌ Interruption (Soft End) timeout expired: ${callId}`);
                         const videoCall = await videoCallService.endCall(callId, 'interruption_timeout', userId);
 
-                        io.to(otherUserId).emit('call:ended', {
+                        const endData = {
                             callId,
                             reason: 'interruption_timeout',
                             canRejoin: false,
-                        });
-
-                        io.to(userId).emit('call:ended', {
-                            callId,
-                            reason: 'interruption_timeout',
-                            canRejoin: false,
-                        });
+                        };
+                        io.to(otherUserId).emit('call:ended', endData);
+                        io.to(userId).emit('call:ended', endData);
 
                         activeCallTimers.delete(`${callId}_interruption`);
                     } catch (err) {
                         logger.error(`Soft end timeout error: ${err.message}`);
                     }
-                }, 60000);
-
-                activeCallTimers.set(`${callId}_interruption`, {
-                    timer: interruptionTimerId,
-                    type: 'interruption',
-                    disconnectedUserId: userId,
-                    remainingTimeWhenPaused: remainingTime,
                 });
+
+                // Add transition data for resumption
+                const interData = activeCallTimers.get(`${callId}_interruption`);
+                if (interData) {
+                    interData.disconnectedUserId = userId;
+                    interData.remainingTimeWhenPaused = remainingTime;
+                }
 
             } else {
                 // HARD END (No time left or already rejoined once)
@@ -513,28 +519,29 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
         const callerId = videoCall.callerId.toString();
         const receiverId = videoCall.receiverId.toString();
 
-        // Start NEW timer with remaining duration
+        // Start NEW timer with remaining duration using helper
         const durationMs = remainingSeconds * 1000;
-        const timerId = setTimeout(async () => {
+        setCallTimer(callId, 'duration', durationMs, async () => {
             try {
                 logger.info(`⏰ Rejoined call timer expired: ${callId}`);
                 await videoCallService.endCall(callId, 'timer_expired', null);
 
-                io.to(callerId).emit('call:force-end', { callId, reason: 'timer_expired' });
-                io.to(receiverId).emit('call:force-end', { callId, reason: 'timer_expired' });
+                const forceEndData = { callId, reason: 'timer_expired' };
+                io.to(callerId).emit('call:force-end', forceEndData);
+                io.to(receiverId).emit('call:force-end', forceEndData);
                 activeCallTimers.delete(callId);
             } catch (error) {
                 logger.error(`Rejoin timer end error: ${error.message}`);
             }
-        }, durationMs);
-
-        activeCallTimers.set(callId, {
-            timer: timerId,
-            type: 'duration',
-            startTime: Date.now() - (videoCall.callDurationSeconds - remainingSeconds) * 1000,
-            callerId,
-            receiverId,
         });
+
+        // Set additional data for resumption calculation
+        const tData = activeCallTimers.get(callId);
+        if (tData) {
+            tData.startTime = Date.now() - (videoCall.callDurationSeconds - remainingSeconds) * 1000;
+            tData.callerId = callerId;
+            tData.receiverId = receiverId;
+        }
 
         // Generate tokens
         const callerIdHex = callerId.slice(-8);

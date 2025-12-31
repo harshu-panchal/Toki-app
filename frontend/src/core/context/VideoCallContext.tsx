@@ -47,10 +47,11 @@ export const VideoCallProvider = ({ children }: VideoCallProviderProps) => {
         const unsubscribe = videoCallService.onStateChange((newState: CallState) => {
             setCallState(newState);
 
-            // Reset timer when call starts
-            if (newState.status === 'connected' && newState.startTime) {
+            // Sync remaining time when call is active or reconnecting
+            if ((newState.status === 'connected' || newState.status === 'connecting') && newState.startTime) {
                 const elapsed = Math.floor((Date.now() - newState.startTime) / 1000);
-                setRemainingTime(Math.max(0, newState.duration - elapsed));
+                const timeLeft = Math.max(0, newState.duration - elapsed);
+                setRemainingTime(timeLeft);
             }
 
             // Clear timer when call ends

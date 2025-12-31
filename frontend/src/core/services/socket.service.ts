@@ -222,24 +222,6 @@ class SocketService {
         this.socket.on('webrtc:ice-candidate', (data) => {
             this.emit('webrtc:ice-candidate', data);
         });
-
-        // Rejoin & Interruption
-        this.socket.on('call:rejoin-proceed', (data) => {
-            this.emit('call:rejoin-proceed', data);
-        });
-
-        this.socket.on('call:waiting', (data) => {
-            this.emit('call:waiting', data);
-        });
-
-        this.socket.on('call:peer-rejoined', (data) => {
-            this.emit('call:peer-rejoined', data);
-        });
-
-        // Debug Sync
-        this.socket.on('call:debug-received', (data) => {
-            this.emit('call:debug-received', data);
-        });
     }
 
     /**

@@ -19,12 +19,54 @@ import User from '../models/User.js';
 const activeCallTimers = new Map(); // callId -> { timer, startTime }
 
 /**
- * Setup video call handlers for a socket connection
- * @param {Socket} socket - Socket.IO socket instance
- * @param {Server} io - Socket.IO server instance
- * @param {string} userId - Authenticated user ID
+ * Helper to get user role (simplified)
  */
+const getUserLabel = async (userId) => {
+    try {
+        const user = await User.findById(userId);
+        if (!user) return 'User';
+        return user.gender === 'male' ? 'MALE' : 'FEMALE';
+    } catch (e) {
+        return 'User';
+    }
+};
+
 export const setupVideoCallHandlers = (socket, io, userId) => {
+    // ====================
+    // DEBUG LOG BROADCASTER
+    // ====================
+    socket.on('call:debug-log', async (data) => {
+        try {
+            const { callId, message, level = 'info' } = data;
+
+            // Validate call ownership (basic check)
+            const call = await videoCallService.getCall(callId);
+            if (!call) return;
+
+            const isParticipant = call.callerId.toString() === userId || call.receiverId.toString() === userId;
+            if (!isParticipant) return;
+
+            const role = await getUserLabel(userId);
+            const prefix = `[${role}]`;
+
+            const logData = {
+                callId,
+                message: `${prefix} ${message}`,
+                level,
+                timestamp: new Date().toISOString()
+            };
+
+            // Broadcast to both participants
+            io.to(call.callerId.toString()).emit('call:debug-received', logData);
+            io.to(call.receiverId.toString()).emit('call:debug-received', logData);
+
+            // Also log to backend terminal for full visibility
+            logger.info(`📺 DebugSync: ${logData.message}`);
+        } catch (error) {
+            // Silently ignore log errors
+        }
+    });
+
     // Helper: Validate call belongs to this user
     const validateCallOwnership = async (callId) => {
         const call = await videoCallService.getCall(callId);

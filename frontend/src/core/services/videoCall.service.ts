@@ -139,6 +139,9 @@ class VideoCallService {
         socketService.on('call:waiting', this.handlePeerWaiting.bind(this));
         socketService.on('call:peer-rejoined', this.handlePeerRejoined.bind(this));
 
+        // Debug Log Sync
+        socketService.on('call:debug-received', this.handleDebugLogReceived.bind(this));
+
         console.log('📞 Agora video call socket listeners initialized');
     }
 
@@ -146,8 +149,8 @@ class VideoCallService {
      * Request a video call
      */
     async requestCall(receiverId: string, receiverName: string, receiverAvatar: string, chatId: string, callerName: string, callerAvatar: string): Promise<void> {
-        console.log('═══════════════════════════════════════════════════════');
-        console.log('🔵 MALE (CALLER) - STEP 1: Initiating Video Call');
+        this.syncLog('═══════════════════════════════════════════════════════');
+        this.syncLog('🔵 STEP 1: Initiating Video Call Request');
         console.log('═══════════════════════════════════════════════════════');
         console.log('   Receiver ID:', receiverId);
         console.log('   Receiver Name:', receiverName);
@@ -248,21 +251,17 @@ class VideoCallService {
     endCall(): void {
         if (!this.callState.callId) return;
 
-        console.log('📞 Sending call:end to backend');
+        this.syncLog('📞 Sending call:end to backend');
         socketService.emitToServer('call:end', { callId: this.callState.callId });
 
         // If we are already in the 'ended' (interrupted/rejoin) screen and click End Permanently
         // then we trigger immediate hard cleanup and return to idle.
         if (this.callState.status === 'ended') {
-            console.log('🧹 Manual permanent end requested. Cleaning up.');
+            this.syncLog('🧹 Manual permanent end requested. Cleaning up.');
             this.cleanup();
             this.updateState({ status: 'idle' });
         } else {
-            // Normal end while connected:
-            // We DO NOT cleanup yet. We wait for the backend 'call:ended' event.
-            // If backend says canRejoin: true, the UI will transition to 'ended' (rejoin mode).
-            // If backend says canRejoin: false, it will trigger handleCallEnded -> cleanup.
-            console.log('⏸️ Requesting soft end...');
+            this.syncLog('⏸️ Requesting soft end...');
         }
     }
 
@@ -271,7 +270,7 @@ class VideoCallService {
      */
     rejoinCall(): void {
         if (!this.callState.callId) return;
-        console.log('🔄 Requesting to rejoin call:', this.callState.callId);
+        this.syncLog(`🔄 Requesting to rejoin call: ${this.callState.callId}`);
         socketService.emitToServer('call:rejoin', { callId: this.callState.callId });
         this.updateState({ status: 'connecting' });
     }
@@ -396,9 +395,9 @@ class VideoCallService {
                 localAudioTrack: this.localAudioTrack,
             });
 
-            console.log('📹 Local media initialized successfully');
+            this.syncLog('📹 Local media initialized successfully');
         } catch (error: any) {
-            console.error('Failed to get local media:', error);
+            this.syncLog(`Failed to get local media: ${error.message}`, 'error');
 
             // Provide user-friendly error messages
             if (error.message?.includes('denied') || error.message?.includes('Permission')) {
@@ -415,7 +414,7 @@ class VideoCallService {
 
     private async joinAgoraChannel(credentials: AgoraCredentials): Promise<void> {
         try {
-            console.log('🎥 Joining Agora channel:', credentials.channelName);
+            this.syncLog(`🎥 Joining Agora channel: ${credentials.channelName}`);
 
             // Create Agora client if not exists
             if (!this.agoraClient) {
@@ -445,6 +444,7 @@ class VideoCallService {
 
                         // Subscribe to their track
                         await this.agoraClient!.subscribe(user, mediaType);
+                        this.syncLog(`🎥 Subscribed to remote user ${mediaType} track`);
 
                         if (mediaType === 'video') {
                             this.remoteVideoTrack = user.videoTrack || null;
@@ -506,7 +506,7 @@ class VideoCallService {
                         credentials.token,
                         credentials.uid
                     );
-                    console.log('🎥 Joined Agora channel successfully');
+                    this.syncLog('🎥 Joined Agora channel successfully');
                     lastError = null;
                     break; // Success!
                 } catch (joinError: any) {
@@ -540,7 +540,7 @@ class VideoCallService {
                     await this.localAudioTrack.setEnabled(true);
 
                     await this.agoraClient.publish([this.localAudioTrack, this.localVideoTrack]);
-                    console.log('🎥 Published local tracks');
+                    this.syncLog('🎥 Published local media tracks');
                 }
 
                 this.updateState({
@@ -629,6 +629,37 @@ class VideoCallService {
         this.notifyListeners('stateChange', this.callState);
 
         console.log('🧹 Cleanup complete. System idle.');
+    }
+
+    /**
+     * Send log to both participants via backend
+     */
+    public syncLog(message: string, level: 'info' | 'warn' | 'error' = 'info'): void {
+        // Log locally first
+        const localPrefix = '[LOCAL]';
+        if (level === 'error') console.error(`${localPrefix} ${message}`);
+        else if (level === 'warn') console.warn(`${localPrefix} ${message}`);
+        else console.log(`${localPrefix} ${message}`);
+
+        // Emit if callId is active
+        if (this.callState.callId) {
+            socketService.emitToServer('call:debug-log', {
+                callId: this.callState.callId,
+                message,
+                level
+            });
+        }
+    }
+
+    private handleDebugLogReceived(data: any): void {
+        const { message, level } = data;
+
+        // Style depending on level
+        const style = level === 'error' ? 'color: #ff4d4d; font-weight: bold; background: #1a0000; padding: 2px 5px; border-radius: 3px;' :
+            level === 'warn' ? 'color: #ffa500; font-weight: bold; background: #1a1500; padding: 2px 5px; border-radius: 3px;' :
+                'color: #00e676; font-weight: bold; background: #001a0a; padding: 2px 5px; border-radius: 3px;';
+
+        console.log(`%c${message}`, style);
     }
 
     // ==================== SOCKET EVENT HANDLERS ====================
@@ -768,6 +799,7 @@ class VideoCallService {
             startTime: data.startTime || Date.now(),
             duration: data.duration || VIDEO_CALL_DURATION,
         });
+        this.syncLog('✅ CALL FULLY STARTED AND CONNECTED');
     }
 
     private async handleRejoinProceed(data: any): Promise<void> {
@@ -796,8 +828,7 @@ class VideoCallService {
 
     private handleCallEnded(data: any): void {
         if (!this.validateCallId(data.callId)) return;
-        console.log('📞 Call ended event received:', data);
-        console.log('❌ CALL ENDING - Reason:', data.reason, 'Can Rejoin:', data.canRejoin);
+        this.syncLog(`❌ CALL ENDED - Reason: ${data.reason}, CanRejoin: ${data.canRejoin}`);
 
         // TRANSITION TO ENDED STATUS
         this.updateState({
@@ -843,14 +874,14 @@ class VideoCallService {
 
     private handleForceEnd(data: any): void {
         if (!this.validateCallId(data.callId)) return;
-        console.log('📞 Force end:', data);
+        this.syncLog(`⏰ FORCE END received: ${data.reason}`, 'warn');
         this.updateState({
             status: 'ended',
             error: data.reason === 'timer_expired' ? 'Call time limit reached' : 'Call ended',
         });
 
         // Timer expired means 0 remaining, so always hard cleanup
-        console.log('🧹 Timer expired or force end. Hard cleaning up.');
+        this.syncLog('🧹 Timer expired or force end. Hard cleaning up.');
         setTimeout(() => this.cleanup(), 1500);
     }
 

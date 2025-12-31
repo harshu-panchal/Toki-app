@@ -24,6 +24,10 @@ const activeCallTimers = new Map(); // callId -> { timer, startTime }
  * @param {string} userId - Authenticated user ID
  */
 export const setupVideoCallHandlers = (socket, io, userId) => {
+    // Ensure user is in their personal room for receiving events
+    socket.join(userId);
+    logger.info(`📞 User ${userId} joined their video call room`);
+
     // ====================
     // CALL REQUEST (Male → Female)
     // ====================

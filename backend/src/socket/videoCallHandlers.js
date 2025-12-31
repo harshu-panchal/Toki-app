@@ -272,6 +272,12 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
             // Mark call as connected (credits coins to receiver)
             const videoCall = await videoCallService.markCallConnected(callId);
 
+            // If this was a rejoin/reconnect (already charged), don't restart the timer or notify started
+            if (videoCall.billingStatus === 'charged' && existingTimer) {
+                logger.debug(`Call ${callId} already billed and timer active, skipping restart logic`);
+                return;
+            }
+
             const callerId = videoCall.callerId.toString();
             const receiverId = videoCall.receiverId.toString();
 

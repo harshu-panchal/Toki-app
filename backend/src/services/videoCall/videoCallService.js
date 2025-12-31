@@ -199,15 +199,21 @@ export const markCallConnected = async (callId) => {
             throw new NotFoundError('Call not found');
         }
 
-        if (videoCall.status === 'connected') {
+        // Check if already connected or billed
+        if (videoCall.status === 'connected' && videoCall.billingStatus === 'charged') {
             return videoCall;
         }
 
-        if (videoCall.status !== 'accepted') {
-            throw new BadRequestError('Call must be accepted before marking as connected');
+        // Allow connection if accepted OR interrupted (rejoin)
+        const allowedStatuses = ['accepted', 'interrupted', 'connected'];
+        if (!allowedStatuses.includes(videoCall.status)) {
+            throw new BadRequestError(`Call cannot be marked as connected from status: ${videoCall.status}`);
         }
 
-        if (videoCall.billingStatus !== 'locked') {
+        // If already billed but status was interrupted, just fix status
+        if (videoCall.billingStatus === 'charged') {
+            videoCall.status = 'connected';
+            await videoCall.save();
             return videoCall;
         }
 

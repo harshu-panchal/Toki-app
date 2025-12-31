@@ -5,6 +5,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react';
 import videoCallService, { CallState, VIDEO_CALL_PRICE, VIDEO_CALL_DURATION } from '../services/videoCall.service';
+import { useAuth } from './AuthContext';
 
 interface VideoCallContextType {
     // State
@@ -34,6 +35,7 @@ interface VideoCallProviderProps {
 
 export const VideoCallProvider = ({ children }: VideoCallProviderProps) => {
     console.log('📞📞📞 VideoCallProvider RENDERING');
+    const { updateUser } = useAuth();
     const [callState, setCallState] = useState<CallState>(videoCallService.getState());
     const [remainingTime, setRemainingTime] = useState(VIDEO_CALL_DURATION);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -61,6 +63,8 @@ export const VideoCallProvider = ({ children }: VideoCallProviderProps) => {
                     timerRef.current = null;
                 }
                 setRemainingTime(VIDEO_CALL_DURATION);
+                // TRACE CLEANUP: Ensure user profile reflects that they are no longer on call
+                updateUser({ isOnCall: false });
             }
 
             // Just stop the timer if ended, but keep value for UI
@@ -71,6 +75,9 @@ export const VideoCallProvider = ({ children }: VideoCallProviderProps) => {
                 }
                 // Do NOT reset remainingTime here so UI can show it
                 console.log('🛑 Call ended in Context - Keeping remaining time:', remainingTime);
+
+                // TRACE CLEANUP: Ensure user profile reflects that they are no longer on call
+                updateUser({ isOnCall: false });
             }
         });
 

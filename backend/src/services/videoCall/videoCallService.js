@@ -453,23 +453,40 @@ export const getActiveCallForUser = async (userId) => {
  * Cleanup stale calls (for server recovery)
  */
 export const cleanupStaleCalls = async () => {
-    const staleThreshold = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes
+    // Calls that never connected (10 min threshold)
+    const staleThreshold = new Date(Date.now() - 10 * 60 * 1000);
+
+    // Connected calls that definitely should have ended by now (15 min threshold)
+    const connectedStaleThreshold = new Date(Date.now() - 15 * 60 * 1000);
 
     const staleCalls = await VideoCall.find({
-        status: { $in: ['pending', 'ringing', 'accepted'] },
-        requestedAt: { $lt: staleThreshold },
+        $or: [
+            {
+                status: { $in: ['pending', 'ringing', 'accepted'] },
+                requestedAt: { $lt: staleThreshold },
+            },
+            {
+                status: 'connected',
+                connectedAt: { $lt: connectedStaleThreshold }
+            }
+        ]
     });
 
+    let count = 0;
     for (const call of staleCalls) {
         try {
             await endCall(call._id.toString(), 'connection_failed', null);
-            logger.warn(`🧹 Cleaned up stale call: ${call._id}`);
+            count++;
         } catch (error) {
             logger.error(`Failed to cleanup stale call ${call._id}: ${error.message}`);
         }
     }
 
-    return staleCalls.length;
+    if (count > 0) {
+        logger.info(`🧹 Cleaned up ${count} stale video calls`);
+    }
+
+    return count;
 };
 
 // Export config for use in handlers

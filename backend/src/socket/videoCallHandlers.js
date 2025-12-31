@@ -12,10 +12,92 @@
 
 import videoCallService from '../services/videoCall/videoCallService.js';
 import agoraService from '../services/agora/agoraService.js';
+import User from '../models/User.js';
+import Chat from '../models/Chat.js';
+import Message from '../models/Message.js';
 import logger from '../utils/logger.js';
 
 // In-memory store for active calls and timers
 const activeCallTimers = new Map(); // callId -> { timer, startTime }
+
+/**
+ * Helper to sync user state (balance, isOnCall) to the frontend
+ */
+async function syncUserCallState(userId, io) {
+    try {
+        const user = await User.findById(userId).select('coinBalance lockedCoins isOnCall');
+        if (user) {
+            // Emit balance update (handled by GlobalStateContext)
+            io.to(userId).emit('balance:update', { balance: user.coinBalance });
+
+            // Emit general user update (handled by GlobalStateContext)
+            io.to(userId).emit('user:update', {
+                userId: user._id,
+                id: user._id, // Add id for frontend compatibility
+                isOnCall: user.isOnCall,
+                coinBalance: user.coinBalance,
+                lockedCoins: user.lockedCoins
+            });
+        }
+    } catch (err) {
+        logger.error(`Error syncing user state for ${userId}: ${err.message}`);
+    }
+}
+
+/**
+ * Helper to insert a call summary message into the chat
+ */
+async function insertCallEndMessage(videoCall, reason, io) {
+    try {
+        const connectedAt = videoCall.connectedAt;
+        const endedAt = videoCall.endedAt || new Date();
+        let durationSeconds = 0;
+        if (connectedAt) {
+            durationSeconds = Math.floor((endedAt.getTime() - new Date(connectedAt).getTime()) / 1000);
+        }
+
+        const minutes = Math.floor(durationSeconds / 60);
+        const seconds = durationSeconds % 60;
+        const durationFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        const statusMap = {
+            'missed': 'missed',
+            'rejected': 'rejected',
+            'cancelled': 'cancelled',
+            'timer_expired': 'ended',
+            'caller_ended': 'ended',
+            'receiver_ended': 'ended',
+            'caller_disconnected': 'ended',
+            'receiver_disconnected': 'ended'
+        };
+
+        const message = await Message.create({
+            chatId: videoCall.chatId,
+            senderId: videoCall.callerId,
+            receiverId: videoCall.receiverId,
+            content: `Video Call ${reason.includes('missed') ? 'Missed' : 'Ended'} (${durationFormatted})`,
+            messageType: 'video_call',
+            videoCall: {
+                callId: videoCall._id,
+                duration: durationSeconds,
+                status: statusMap[reason] || 'ended',
+                cost: videoCall.billingStatus === 'charged' ? videoCall.coinAmount : 0
+            }
+        });
+
+        await Chat.findByIdAndUpdate(videoCall.chatId, {
+            lastMessage: message._id,
+            lastMessageAt: new Date()
+        });
+
+        io.to(`chat:${videoCall.chatId.toString()}`).emit('message:new', {
+            message,
+            chatId: videoCall.chatId.toString()
+        });
+    } catch (err) {
+        logger.error(`Error inserting call end message: ${err.message}`);
+    }
+}
 
 /**
  * Helper to setup timer & token for call resumption (REJOIN)
@@ -148,6 +230,13 @@ async function initiateCallInterruption(callId, disconnectedUserId, io) {
                 refunded: videoCall.billingStatus === 'refunded',
             });
 
+            // TRACE CLEANUP: Clear UI flags and balance
+            await syncUserCallState(videoCall.callerId.toString(), io);
+            await syncUserCallState(videoCall.receiverId.toString(), io);
+
+            // TRACE CLEANUP: Insert chat message
+            await insertCallEndMessage(videoCall, endReason, io);
+
             activeCallTimers.delete(`${callId}_interruption`);
 
         } catch (err) {
@@ -208,7 +297,7 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
             // Start ringing timeout
             const timeoutId = setTimeout(async () => {
                 try {
-                    await videoCallService.handleMissedCall(videoCall._id.toString());
+                    const videoCall = await videoCallService.handleMissedCall(videoCall._id.toString());
 
                     // Notify both users
                     socket.emit('call:missed', { callId: videoCall._id.toString() });
@@ -216,6 +305,15 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                         callId: videoCall._id.toString(),
                         reason: 'missed',
                     });
+
+                    // TRACE CLEANUP: Clear UI flags and balance
+                    await syncUserCallState(userId, io);
+                    await syncUserCallState(receiverId, io);
+
+                    // TRACE CLEANUP: Insert chat message
+                    await insertCallEndMessage(videoCall, 'missed', io);
+
+                    activeCallTimers.delete(videoCall._id.toString());
                 } catch (error) {
                     logger.error(`Missed call handling error: ${error.message}`);
                 }
@@ -331,6 +429,13 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                 callId,
                 reason: 'rejected',
             });
+
+            // TRACE CLEANUP: Clear UI flags and balance
+            await syncUserCallState(videoCall.callerId.toString(), io);
+            await syncUserCallState(videoCall.receiverId.toString(), io);
+
+            // TRACE CLEANUP: Insert chat message
+            await insertCallEndMessage(videoCall, 'rejected', io);
         } catch (error) {
             logger.error(`Call reject error: ${error.message}`);
             socket.emit('call:error', { message: error.message });
@@ -391,6 +496,10 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
 
             io.to(callerId).emit('call:started', callStartData);
             io.to(receiverId).emit('call:started', callStartData);
+
+            // TRACE CLEANUP: Sync coins (charged/earned)
+            await syncUserCallState(callerId, io);
+            await syncUserCallState(receiverId, io);
         } catch (error) {
             logger.error(`Call connected error: ${error.message}`);
             socket.emit('call:error', { message: error.message });
@@ -459,6 +568,13 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
             // Notify both users using rooms
             io.to(videoCall.callerId.toString()).emit('call:ended', endData);
             io.to(videoCall.receiverId.toString()).emit('call:ended', endData);
+
+            // TRACE CLEANUP: Clear UI flags and balance
+            await syncUserCallState(videoCall.callerId.toString(), io);
+            await syncUserCallState(videoCall.receiverId.toString(), io);
+
+            // TRACE CLEANUP: Insert chat message
+            await insertCallEndMessage(videoCall, endReason, io);
         } catch (error) {
             logger.error(`Call end error: ${error.message}`);
             socket.emit('call:error', { message: error.message });

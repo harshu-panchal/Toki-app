@@ -17,6 +17,8 @@ export interface UserProfile {
   approvalStatus?: 'pending' | 'approved' | 'rejected' | 'resubmit_requested' | 'banned';
   rejectionReason?: string;
   coinBalance?: number;
+  lockedCoins?: number;
+  isOnCall?: boolean;
   memberTier?: 'basic' | 'silver' | 'gold' | 'platinum';
   latitude?: number;
   longitude?: number;

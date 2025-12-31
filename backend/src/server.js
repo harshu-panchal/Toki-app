@@ -58,6 +58,9 @@ const startServer = async () => {
 
       // Start wallet scheduler (for expired withdrawal processing)
       walletScheduler.startScheduler();
+
+      // Video Call Cleanup (Cleanup stale calls from previous server run)
+      import('./services/videoCall/videoCallService.js').then(m => m.default.cleanupStaleCalls()).catch(err => logger.error(`Stale call cleanup error: ${err.message}`));
     });
 
     // Handle unhandled promise rejections

@@ -40,6 +40,7 @@ const videoCallSchema = new mongoose.Schema(
                 'missed',       // Receiver didn't answer (timeout)
                 'failed',       // WebRTC connection failed
                 'cancelled',    // Caller cancelled before receiver answered
+                'interrupted',  // Soft ended or disconnected, waiting for rejoin
             ],
             default: 'pending',
             index: true,
@@ -110,7 +111,7 @@ videoCallSchema.index({ status: 1, createdAt: -1 });
 videoCallSchema.statics.getActiveCallForUser = async function (userId) {
     return this.findOne({
         $or: [{ callerId: userId }, { receiverId: userId }],
-        status: { $in: ['pending', 'ringing', 'accepted', 'connected'] },
+        status: { $in: ['pending', 'ringing', 'accepted', 'connected', 'interrupted'] },
     });
 };
 

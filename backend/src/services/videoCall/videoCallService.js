@@ -379,8 +379,9 @@ export const rejoinCall = async (callId, userId) => {
             throw new NotFoundError('Call not found');
         }
 
-        // Validate if rejoin is possible
-        if (videoCall.status !== 'ended' && videoCall.status !== 'failed') {
+        // Validate if rejoin is possible - now allowing 'connected' and 'interrupted'
+        const allowRejoinStates = ['connected', 'interrupted', 'ended', 'failed'];
+        if (!allowRejoinStates.includes(videoCall.status)) {
             throw new BadRequestError(`Cannot rejoin call in ${videoCall.status} state`);
         }
 
@@ -453,40 +454,23 @@ export const getActiveCallForUser = async (userId) => {
  * Cleanup stale calls (for server recovery)
  */
 export const cleanupStaleCalls = async () => {
-    // Calls that never connected (10 min threshold)
-    const staleThreshold = new Date(Date.now() - 10 * 60 * 1000);
-
-    // Connected calls that definitely should have ended by now (15 min threshold)
-    const connectedStaleThreshold = new Date(Date.now() - 15 * 60 * 1000);
+    const staleThreshold = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes
 
     const staleCalls = await VideoCall.find({
-        $or: [
-            {
-                status: { $in: ['pending', 'ringing', 'accepted'] },
-                requestedAt: { $lt: staleThreshold },
-            },
-            {
-                status: 'connected',
-                connectedAt: { $lt: connectedStaleThreshold }
-            }
-        ]
+        status: { $in: ['pending', 'ringing', 'accepted'] },
+        requestedAt: { $lt: staleThreshold },
     });
 
-    let count = 0;
     for (const call of staleCalls) {
         try {
             await endCall(call._id.toString(), 'connection_failed', null);
-            count++;
+            logger.warn(`🧹 Cleaned up stale call: ${call._id}`);
         } catch (error) {
             logger.error(`Failed to cleanup stale call ${call._id}: ${error.message}`);
         }
     }
 
-    if (count > 0) {
-        logger.info(`🧹 Cleaned up ${count} stale video calls`);
-    }
-
-    return count;
+    return staleCalls.length;
 };
 
 // Export config for use in handlers

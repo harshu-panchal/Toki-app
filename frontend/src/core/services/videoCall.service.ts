@@ -154,6 +154,12 @@ class VideoCallService {
         console.log('   Chat ID:', chatId);
         console.log('   Current Status:', this.callState.status);
 
+        // Guardrail: Cleanup if we are in 'ended' state before a new call
+        if (this.callState.status === 'ended') {
+            console.log('🧹 Cleaning up previous ended session before new request');
+            await this.cleanup();
+        }
+
         if (this.callState.status !== 'idle') {
             console.error('❌ MALE - Cannot initiate call - already in call:', this.callState.status);
             throw new Error('Already in a call');
@@ -238,35 +244,26 @@ class VideoCallService {
 
     /**
      * End the current call
-     * Performs "soft leave" - leaves Agora channel but keeps engine/tracks alive for rejoin
      */
-    async endCall(): Promise<void> {
+    endCall(): void {
         if (!this.callState.callId) return;
 
-        console.log('🔴 User initiated call end - performing soft leave');
-
-        // If we are already in rejoin mode, or call was interrupted, fully cleanup
-        if (this.callState.status === 'ended') {
-            await this.cleanup();
-            this.updateState({ status: 'idle' });
-            return;
-        }
-
-        // SOFT LEAVE: Leave Agora channel but keep engine and tracks alive
-        if (this.agoraClient) {
-            try {
-                console.log('🔴 Leaving Agora channel (soft leave)...');
-                await this.agoraClient.leave();
-                console.log('✅ Left Agora channel - engine and tracks preserved');
-            } catch (error) {
-                console.error('❌ Error leaving Agora channel:', error);
-            }
-        }
-
-        // Emit to backend
+        console.log('📞 Sending call:end to backend');
         socketService.emitToServer('call:end', { callId: this.callState.callId });
 
-        // Backend will respond with call:ended which will show the rejoin UI
+        // If we are already in the 'ended' (interrupted/rejoin) screen and click End Permanently
+        // then we trigger immediate hard cleanup and return to idle.
+        if (this.callState.status === 'ended') {
+            console.log('🧹 Manual permanent end requested. Cleaning up.');
+            this.cleanup();
+            this.updateState({ status: 'idle' });
+        } else {
+            // Normal end while connected:
+            // We DO NOT cleanup yet. We wait for the backend 'call:ended' event.
+            // If backend says canRejoin: true, the UI will transition to 'ended' (rejoin mode).
+            // If backend says canRejoin: false, it will trigger handleCallEnded -> cleanup.
+            console.log('⏸️ Requesting soft end...');
+        }
     }
 
     /**
@@ -583,48 +580,71 @@ class VideoCallService {
     }
 
     private async cleanup(): Promise<void> {
-        console.log('🧹 Cleaning up video call resources...');
+        console.log('🧹 Cleaning up video call resources (Hard Cleanup)...');
 
-        // Stop and close local tracks
+        // 1. Stop and close local tracks
         if (this.localAudioTrack) {
-            this.localAudioTrack.stop();
-            this.localAudioTrack.close();
+            try {
+                this.localAudioTrack.stop();
+                this.localAudioTrack.close();
+            } catch (e) {
+                console.warn('Error stopping audio track:', e);
+            }
             this.localAudioTrack = null;
         }
         if (this.localVideoTrack) {
-            this.localVideoTrack.stop();
-            this.localVideoTrack.close();
+            try {
+                this.localVideoTrack.stop();
+                this.localVideoTrack.close();
+            } catch (e) {
+                console.warn('Error stopping video track:', e);
+            }
             this.localVideoTrack = null;
         }
 
-        // Leave Agora channel
+        // 2. Leave Agora channel and fully destroy client
         if (this.agoraClient) {
             try {
-                await this.agoraClient.leave();
+                const state = this.agoraClient.connectionState;
+                console.log('🎥 Agora client state before leave:', state);
+
+                // Only leave if not already disconnected
+                if (state !== 'DISCONNECTED') {
+                    await this.agoraClient.leave();
+                }
+
+                this.agoraClient.removeAllListeners();
             } catch (e) {
                 console.warn('Error leaving Agora channel:', e);
             }
             this.agoraClient = null;
         }
 
+        // 3. Reset remote tracks
         this.remoteVideoTrack = null;
         this.remoteAudioTrack = null;
 
-
-        // Reset state
+        // 4. Reset state to IDLE
         this.callState = this.getInitialState();
         this.notifyListeners('stateChange', this.callState);
 
-        console.log('🧹 Cleanup complete');
+        console.log('🧹 Cleanup complete. System idle.');
     }
 
     // ==================== SOCKET EVENT HANDLERS ====================
 
     private handleIncomingCall(data: any): void {
-        // Ignore if we are already handling this call or already in another call
-        if (this.callState.callId === data.callId || this.callState.status !== 'idle') {
+        // Ignore if we are already handling this call or already in another ACTIVE call
+        const isActuallyInCall = this.callState.status !== 'idle' && this.callState.status !== 'ended';
+        if (this.callState.callId === data.callId || isActuallyInCall) {
             console.log('📞 Ignoring duplicate or overlapping incoming call:', data.callId);
             return;
+        }
+
+        // If we were in an 'ended' state (rejoin screen), cleanup before accepting new incoming ring
+        if (this.callState.status === 'ended') {
+            console.log('🧹 Cleaning up previous ended session for new incoming call');
+            this.cleanup();
         }
 
         console.log('📞 Incoming call:', data);
@@ -737,7 +757,6 @@ class VideoCallService {
     private async handleRejoinProceed(data: any): Promise<void> {
         console.log('🔄 STEP 5-REJOIN: Received call:rejoin-proceed');
         console.log('🔄 New startTime:', data.startTime);
-        console.log('🔄 Agora credentials:', data.agora);
 
         if (data.agora) {
             try {
@@ -747,37 +766,10 @@ class VideoCallService {
                     startTime: data.startTime
                 });
 
-                // FAST RECONNECTION: Reuse existing Agora engine and tracks
-                if (this.agoraClient && this.localVideoTrack && this.localAudioTrack) {
-                    console.log('🔄 Reusing existing Agora engine and tracks');
+                await this.joinAgoraChannel(data.agora);
 
-                    // Join with new token
-                    await this.agoraClient.join(
-                        data.agora.appId,
-                        data.agora.channelName,
-                        data.agora.token,
-                        data.agora.uid
-                    );
-
-                    console.log('✅ Rejoined Agora channel');
-
-                    // Re-publish existing tracks
-                    await this.agoraClient.publish([this.localAudioTrack, this.localVideoTrack]);
-                    console.log('✅ Re-published local tracks');
-
-                    this.updateState({
-                        status: 'connected',
-                        agoraChannel: data.agora.channelName,
-                        agoraToken: data.agora.token,
-                        agoraUid: data.agora.uid
-                    });
-                    console.log('✅ REJOIN COMPLETE - Call resumed!');
-                } else {
-                    // Fallback: Full initialization if tracks were somehow destroyed
-                    console.warn('⚠️ Tracks not available, performing full initialization');
-                    await this.joinAgoraChannel(data.agora);
-                    this.updateState({ status: 'connected' });
-                }
+                this.updateState({ status: 'connected' });
+                console.log('✅ REJOIN COMPLETE');
             } catch (error) {
                 console.error('❌ Failed to rejoin Agora channel:', error);
                 this.updateState({ status: 'ended', error: 'Failed to rejoin' });
@@ -787,30 +779,47 @@ class VideoCallService {
 
     private handleCallEnded(data: any): void {
         console.log('📞 Call ended event received:', data);
-        console.log('❌ CALL ENDING - Reason:', data.reason);
+        console.log('❌ CALL ENDING - Reason:', data.reason, 'Can Rejoin:', data.canRejoin);
 
+        // TRANSITION TO ENDED STATUS
         this.updateState({
             status: 'ended',
             error: data.reason === 'rejected' ? 'Call rejected' : null,
         });
 
-        // CHECK FOR REJOIN POSSIBILITY
-        const elapsed = data.duration || 0;
-        const remaining = (this.callState.duration || VIDEO_CALL_DURATION) - elapsed;
-        const canRejoin = remaining > 10 && !this.callState.wasRejoined;
+        // Backend explicitly tells us if rejoin is possible
+        const canRejoin = data.canRejoin === true;
 
-        if (canRejoin && data.reason !== 'rejected') {
-            console.log('⏳ REJOIN WINDOW OPEN: Avoiding immediate cleanup. Remaining:', remaining);
-            // Safety cleanup after 60 seconds if user does nothing
+        if (canRejoin) {
+            console.log('⏳ REJOIN WINDOW OPEN: Soft leave active. Keeping resources.');
+
+            // Soft Leave - Leave Agora channel but DO NOT stop tracks or destroy client
+            if (this.agoraClient) {
+                this.agoraClient.leave().catch(e => console.warn('Error during soft leave:', e));
+            }
+
+            // Mute video track to save bandwidth/privacy
+            if (this.localVideoTrack) {
+                this.localVideoTrack.setEnabled(false);
+            }
+
+            // We do NOT call cleanup() here. 
+            // The UI will show the "Rejoin" screen.
+            // A safety timeout is provided in case the user stays on this screen forever.
             setTimeout(() => {
                 if (this.callState.status === 'ended') {
-                    console.log('⏳ Rejoin window expired. Cleaning up.');
+                    console.log('⏳ Rejoin window safety timeout. Hard cleaning up.');
                     this.cleanup();
                 }
-            }, 60000);
+            }, 70000); // Slightly longer than backend grace to avoid race
         } else {
-            console.log('🧹 No rejoin possible. Cleaning up in 2s.');
-            setTimeout(() => this.cleanup(), 2000);
+            console.log('🧹 No rejoin possible. Hard cleaning up in 1s.');
+            // Small delay for UI smoothness
+            setTimeout(() => {
+                if (this.callState.status === 'ended') {
+                    this.cleanup();
+                }
+            }, 1000);
         }
     }
 
@@ -821,32 +830,23 @@ class VideoCallService {
             error: data.reason === 'timer_expired' ? 'Call time limit reached' : 'Call ended',
         });
 
-        // Timer expired means 0 remaining, so always cleanup
-        setTimeout(() => this.cleanup(), 2000);
+        // Timer expired means 0 remaining, so always hard cleanup
+        console.log('🧹 Timer expired or force end. Hard cleaning up.');
+        setTimeout(() => this.cleanup(), 1500);
     }
 
     private handleCallError(data: any): void {
         console.error('📞 Call error:', data);
+
+        // Error might be interrupt, but for now we treat as hard end to be safe
+        // unless backend explicitly says otherwise (not implemented yet for error)
         this.updateState({
             status: 'ended',
-            error: data.message,
+            error: data.message || 'Call error',
         });
 
-        // Error might be interrupt, so check if we started
-        if (this.callState.startTime) {
-            const elapsed = Math.floor((Date.now() - this.callState.startTime) / 1000);
-            const remaining = (this.callState.duration || VIDEO_CALL_DURATION) - elapsed;
-
-            if (remaining > 10 && !this.callState.wasRejoined) {
-                console.log('⏳ ERROR REJOIN WINDOW OPEN. Avoiding immediate cleanup.');
-                setTimeout(() => {
-                    if (this.callState.status === 'ended') this.cleanup();
-                }, 60000);
-                return;
-            }
-        }
-
-        setTimeout(() => this.cleanup(), 2000);
+        console.log('🧹 Call error occurred. Hard cleaning up.');
+        setTimeout(() => this.cleanup(), 1500);
     }
 
     private handleMissedCall(data: any): void {
@@ -855,43 +855,20 @@ class VideoCallService {
             status: 'ended',
             error: 'Call missed. Coins refunded.',
         });
-        setTimeout(() => this.cleanup(), 2000);
+        console.log('🧹 Call missed. Hard cleaning up.');
+        setTimeout(() => this.cleanup(), 1500);
     }
 
     // Peer disconnected - Waiting state
     private handlePeerWaiting(data: any): void {
         console.log('⏳ Peer disconnected. Waiting for them...', data);
         this.updateState({ isPeerDisconnected: true });
-
-        // PAUSE STREAMING: Stop publishing to save bandwidth and indicicate waiting
-        if (this.agoraClient && (this.localVideoTrack || this.localAudioTrack)) {
-            const tracksToUnpublish = [];
-            if (this.localVideoTrack) tracksToUnpublish.push(this.localVideoTrack);
-            if (this.localAudioTrack) tracksToUnpublish.push(this.localAudioTrack);
-
-            if (tracksToUnpublish.length > 0) {
-                console.log('⏸️ Pausing local streaming while waiting for peer...');
-                this.agoraClient.unpublish(tracksToUnpublish).catch(e => console.warn('Unpublish err:', e));
-            }
-        }
     }
 
     // Peer rejoined
     private handlePeerRejoined(data: any): void {
         console.log('✅ Peer rejoined! Resuming call.', data);
         this.updateState({ isPeerDisconnected: false });
-
-        // RESUME STREAMING
-        if (this.agoraClient && (this.localVideoTrack || this.localAudioTrack)) {
-            const tracksToPublish = [];
-            if (this.localVideoTrack) tracksToPublish.push(this.localVideoTrack);
-            if (this.localAudioTrack) tracksToPublish.push(this.localAudioTrack);
-
-            if (tracksToPublish.length > 0) {
-                console.log('▶️ Resuming local streaming as peer is back.');
-                this.agoraClient.publish(tracksToPublish).catch(e => console.warn('Publish err:', e));
-            }
-        }
     }
 }
 

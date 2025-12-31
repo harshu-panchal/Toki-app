@@ -323,19 +323,23 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                 logger.info(`⏸️ Call paused. Remaining: ${remainingTime}s`);
             }
 
-            // 2. Notify the disconnecting user that their call has ended
+            const duration = call.connectedAt
+                ? Math.floor((Date.now() - new Date(call.connectedAt).getTime()) / 1000)
+                : 0;
+
+            // 2. Notify the disconnecting user that their call has ended (but they can rejoin)
             socket.emit('call:ended', {
                 callId,
                 reason: call.callerId.toString() === userId ? 'caller_ended' : 'receiver_ended',
-                duration: call.connectedAt
-                    ? Math.floor((Date.now() - new Date(call.connectedAt).getTime()) / 1000)
-                    : 0,
+                duration,
+                canRejoin: true, // IMPORTANT: Signal that rejoin is possible
             });
 
-            // 3. Notify OTHER user to WAIT (they stay in call)
+            // 3. Notify OTHER user to WAIT (they stay in call interface but see waiting overlay)
             io.to(otherUserId).emit('call:waiting', {
                 callId,
                 disconnectedUserId: userId,
+                remainingTime,
             });
 
             // 4. Start INTERRUPTION TIMEOUT (60s grace period)
@@ -353,12 +357,16 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                         userId
                     );
 
-                    // Notify other user that waiting is over -> Call Ended
-                    io.to(otherUserId).emit('call:ended', {
+                    // Notify BOTH users that waiting is over -> Call Ended permanently
+                    const permanentEndData = {
                         callId,
-                        reason: endReason,
+                        reason: 'timeout_expired',
                         refunded: videoCall.billingStatus === 'refunded',
-                    });
+                        canRejoin: false, // No more rejoin after timeout
+                    };
+
+                    io.to(call.callerId.toString()).emit('call:ended', permanentEndData);
+                    io.to(call.receiverId.toString()).emit('call:ended', permanentEndData);
 
                     activeCallTimers.delete(`${callId}_interruption`);
 
@@ -646,12 +654,16 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                             userId
                         );
 
-                        // Notify other user that waiting is over -> Call Ended
-                        io.to(otherUserId).emit('call:ended', {
+                        // Notify BOTH users that waiting is over -> Call Ended permanently
+                        const permanentEndData = {
                             callId,
-                            reason: endReason,
+                            reason: 'timeout_expired',
                             refunded: videoCall.billingStatus === 'refunded',
-                        });
+                            canRejoin: false,
+                        };
+
+                        io.to(activeCall.callerId.toString()).emit('call:ended', permanentEndData);
+                        io.to(activeCall.receiverId.toString()).emit('call:ended', permanentEndData);
 
                         activeCallTimers.delete(`${callId}_interruption`);
 

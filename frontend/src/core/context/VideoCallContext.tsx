@@ -84,7 +84,10 @@ export const VideoCallProvider = ({ children }: VideoCallProviderProps) => {
 
     // Countdown timer when connected
     useEffect(() => {
-        if (callState.status === 'connected') {
+        // Only run countdown if connected AND peer is NOT disconnected (interruption)
+        const shouldCountDown = callState.status === 'connected' && !callState.isPeerDisconnected;
+
+        if (shouldCountDown) {
             timerRef.current = setInterval(() => {
                 setRemainingTime((prev) => {
                     if (prev <= 1) {
@@ -107,7 +110,7 @@ export const VideoCallProvider = ({ children }: VideoCallProviderProps) => {
                 timerRef.current = null;
             }
         };
-    }, [callState.status]);
+    }, [callState.status, callState.isPeerDisconnected]);
 
     // Actions
     const requestCall = useCallback(

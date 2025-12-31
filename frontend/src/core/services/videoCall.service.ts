@@ -633,6 +633,17 @@ class VideoCallService {
 
     // ==================== SOCKET EVENT HANDLERS ====================
 
+    private validateCallId(dataCallId?: string): boolean {
+        if (!dataCallId) return true;
+        if (!this.callState.callId) return true;
+
+        if (dataCallId !== this.callState.callId) {
+            console.warn(`⚠️ Ignoring event for mismatched callId. Current: ${this.callState.callId}, Event: ${dataCallId}`);
+            return false;
+        }
+        return true;
+    }
+
     private handleIncomingCall(data: any): void {
         // Ignore if we are already handling this call or already in another ACTIVE call
         const isActuallyInCall = this.callState.status !== 'idle' && this.callState.status !== 'ended';
@@ -664,6 +675,7 @@ class VideoCallService {
     }
 
     private handleOutgoingCall(data: any): void {
+        if (!this.validateCallId(data.callId)) return;
         console.log('📞 Outgoing call status:', data);
 
         // Play ringtone for outgoing call
@@ -677,6 +689,7 @@ class VideoCallService {
     }
 
     private async handleCallAccepted(data: any): Promise<void> {
+        if (!this.validateCallId(data.callId)) return;
         console.log('📞 Call accepted with Agora credentials:', data);
 
         // Only set to connecting if we aren't already connected
@@ -703,6 +716,7 @@ class VideoCallService {
     }
 
     private async handleCallProceed(data: any): Promise<void> {
+        if (!this.validateCallId(data.callId)) return;
         console.log('🎯 STEP 5: Received call:proceed from backend');
         console.log('🎯 Agora credentials:', data.agora);
 
@@ -731,6 +745,7 @@ class VideoCallService {
     }
 
     private handleCallRejected(data: any): void {
+        if (!this.validateCallId(data.callId)) return;
         console.log('📞 Call rejected:', data);
         this.updateState({
             status: 'ended',
@@ -740,6 +755,7 @@ class VideoCallService {
     }
 
     private handleCallStarted(data: any): void {
+        if (!this.validateCallId(data.callId)) return;
         if (this.callState.status === 'connected') return;
 
         console.log('📞 Call started:', data);
@@ -755,6 +771,7 @@ class VideoCallService {
     }
 
     private async handleRejoinProceed(data: any): Promise<void> {
+        if (!this.validateCallId(data.callId)) return;
         console.log('🔄 STEP 5-REJOIN: Received call:rejoin-proceed');
         console.log('🔄 New startTime:', data.startTime);
 
@@ -778,6 +795,7 @@ class VideoCallService {
     }
 
     private handleCallEnded(data: any): void {
+        if (!this.validateCallId(data.callId)) return;
         console.log('📞 Call ended event received:', data);
         console.log('❌ CALL ENDING - Reason:', data.reason, 'Can Rejoin:', data.canRejoin);
 
@@ -824,6 +842,7 @@ class VideoCallService {
     }
 
     private handleForceEnd(data: any): void {
+        if (!this.validateCallId(data.callId)) return;
         console.log('📞 Force end:', data);
         this.updateState({
             status: 'ended',
@@ -836,20 +855,38 @@ class VideoCallService {
     }
 
     private handleCallError(data: any): void {
+        if (!this.validateCallId(data.callId)) return;
         console.error('📞 Call error:', data);
 
-        // Error might be interrupt, but for now we treat as hard end to be safe
-        // unless backend explicitly says otherwise (not implemented yet for error)
         this.updateState({
             status: 'ended',
             error: data.message || 'Call error',
         });
 
-        console.log('🧹 Call error occurred. Hard cleaning up.');
-        setTimeout(() => this.cleanup(), 1500);
+        // Calculate if rejoin is possible
+        const elapsed = this.callState.startTime
+            ? Math.floor((Date.now() - this.callState.startTime) / 1000)
+            : 0;
+        const remaining = (this.callState.duration || VIDEO_CALL_DURATION) - elapsed;
+        const canRejoin = remaining > 10 && !this.callState.wasRejoined;
+
+        if (canRejoin) {
+            console.log('⏳ ERROR but rejoin window open. Keeping resources for potential rejoin.');
+            // Safety timeout - longer than normal to allow backend recovery
+            setTimeout(() => {
+                if (this.callState.status === 'ended') {
+                    console.log('⏳ Error rejoin window expired. Cleaning up.');
+                    this.cleanup();
+                }
+            }, 70000); // 70 seconds - give backend time to recover
+        } else {
+            console.log('🧹 Call error with no rejoin possible. Hard cleaning up.');
+            setTimeout(() => this.cleanup(), 1500);
+        }
     }
 
     private handleMissedCall(data: any): void {
+        if (!this.validateCallId(data.callId)) return;
         console.log('📞 Missed call:', data);
         this.updateState({
             status: 'ended',
@@ -861,12 +898,14 @@ class VideoCallService {
 
     // Peer disconnected - Waiting state
     private handlePeerWaiting(data: any): void {
+        if (!this.validateCallId(data.callId)) return;
         console.log('⏳ Peer disconnected. Waiting for them...', data);
         this.updateState({ isPeerDisconnected: true });
     }
 
     // Peer rejoined
     private handlePeerRejoined(data: any): void {
+        if (!this.validateCallId(data.callId)) return;
         console.log('✅ Peer rejoined! Resuming call.', data);
         this.updateState({ isPeerDisconnected: false });
     }

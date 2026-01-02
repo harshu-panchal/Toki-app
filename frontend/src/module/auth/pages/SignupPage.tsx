@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { useTranslation } from '../../../core/hooks/useTranslation';
+import { normalizePhoneNumber } from '../../../core/utils/phoneNumber';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -54,8 +55,13 @@ export const SignupPage = () => {
 
     if (!formData.phone.trim()) {
       newErrors.phone = t('Phone number is required');
-    } else if (!/^\d{10}$/.test(formData.phone)) {
-      newErrors.phone = t('Please enter a valid 10-digit phone number');
+    } else {
+      try {
+        // Attempt to normalize - will throw if invalid
+        normalizePhoneNumber(formData.phone);
+      } catch (error: any) {
+        newErrors.phone = t('Please enter a valid phone number');
+      }
     }
 
     if (!formData.dateOfBirth) {
@@ -123,8 +129,11 @@ export const SignupPage = () => {
       // Signup API call - Field names MUST match backend expectations
       const age = calculateAge(formData.dateOfBirth); // Calculate age from DOB
 
+      // Normalize phone number (handles +91, 91, or 10-digit input)
+      const normalizedPhone = normalizePhoneNumber(formData.phone);
+
       const payload = {
-        phoneNumber: `91${formData.phone}`, // Enforce 91 prefix for backend consistency
+        phoneNumber: normalizedPhone,
         name: formData.fullName,
         age: age,
         dateOfBirth: formData.dateOfBirth,
@@ -144,7 +153,7 @@ export const SignupPage = () => {
       navigate('/otp-verification', {
         state: {
           mode: 'signup',
-          phoneNumber: `91${formData.phone}`,
+          phoneNumber: normalizedPhone,
           signupData: payload // For OTP resend if needed
         }
       });

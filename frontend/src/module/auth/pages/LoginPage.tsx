@@ -1,15 +1,13 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MaterialSymbol } from '../../../shared/components/MaterialSymbol';
 import { useTranslation } from '../../../core/hooks/useTranslation';
-import type { LoginData } from '../types/auth.types';
-
+import { normalizePhoneNumber } from '../../../core/utils/phoneNumber';
 import { loginWithOtp } from '../services/auth.service';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation(); // ADD THIS LINE
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<{ phone: string }>({
     phone: '',
   });
@@ -21,9 +19,14 @@ export const LoginPage = () => {
     const newErrors: { phone?: string } = {};
 
     if (!formData.phone?.trim()) {
-      newErrors.phone = t('Phone number is required'); // TRANSLATE ERROR MESSAGES
-    } else if (!/^\d{10}$/.test(formData.phone)) {
-      newErrors.phone = t('Please enter a valid 10-digit phone number');
+      newErrors.phone = t('Phone number is required');
+    } else {
+      try {
+        // Attempt to normalize - will throw if invalid
+        normalizePhoneNumber(formData.phone);
+      } catch (error: any) {
+        newErrors.phone = t('Please enter a valid phone number');
+      }
     }
 
     setErrors(newErrors);
@@ -36,10 +39,11 @@ export const LoginPage = () => {
       setIsLoading(true);
       setApiError(null);
       try {
-        const fullPhone = `91${formData.phone}`;
-        await loginWithOtp(fullPhone);
+        // Normalize phone number (handles +91, 91, or 10-digit input)
+        const normalizedPhone = normalizePhoneNumber(formData.phone);
+        await loginWithOtp(normalizedPhone);
         navigate('/otp-verification', {
-          state: { mode: 'login', phoneNumber: fullPhone }
+          state: { mode: 'login', phoneNumber: normalizedPhone }
         });
       } catch (err: any) {
         setApiError(err.message || t('Login request failed'));
@@ -50,18 +54,10 @@ export const LoginPage = () => {
   };
 
   const handleChange = (value: string) => {
-    // Strip everything except digits
-    let digits = value.replace(/\D/g, '');
-
-    // If it starts with 91 and has more than 10 digits, strip the 91
-    if (digits.startsWith('91') && digits.length > 10) {
-      digits = digits.slice(2);
-    }
-
-    // Keep only last 10 digits if more were entered (e.g. pasted +919876543210)
-    const finalDigits = digits.length > 10 ? digits.slice(-10) : digits;
-
-    setFormData({ phone: finalDigits });
+    // Allow user to type freely, we'll validate on submit
+    // Remove non-digit characters except +
+    const cleaned = value.replace(/[^\d+]/g, '');
+    setFormData({ phone: cleaned });
     if (errors.phone) {
       setErrors({});
     }

@@ -13,9 +13,16 @@ import { MaterialSymbol } from './MaterialSymbol';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_AND_TRANSLATE_API;
 
+interface LocationDetails {
+    city?: string;
+    state?: string;
+    country?: string;
+    coordinates?: { lat: number; lng: number };
+}
+
 interface GoogleMapsAutocompleteProps {
     value: string;
-    onChange: (value: string, coordinates?: { lat: number; lng: number }) => void;
+    onChange: (value: string, details?: LocationDetails) => void;
     placeholder?: string;
     className?: string;
     disabled?: boolean;
@@ -85,6 +92,19 @@ export const GoogleMapsAutocomplete = ({
         };
     }, []);
 
+    // Use ref for onChange to prevent re-initializing Autocomplete every time it changes
+    const onChangeRef = useRef(onChange);
+    useEffect(() => {
+        onChangeRef.current = onChange;
+    }, [onChange]);
+
+    // Sync input value when prop changes (for "Use My Location" or external updates)
+    useEffect(() => {
+        if (inputRef.current && value !== undefined && inputRef.current.value !== value) {
+            inputRef.current.value = value;
+        }
+    }, [value]);
+
     // Initialize autocomplete
     useEffect(() => {
         if (!isApiLoaded || !inputRef.current || disabled) return;
@@ -100,10 +120,9 @@ export const GoogleMapsAutocomplete = ({
             console.log('Initializing Google Places Autocomplete...');
 
             // Initialize Google Places Autocomplete
-            // NOTE: (cities) cannot be mixed with other types - use 'geocode' for all locations
             autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
-                types: ['geocode'], // Use 'geocode' instead of mixing types - includes cities, localities, etc.
-                componentRestrictions: { country: 'in' }, // Restrict to India
+                types: ['geocode'],
+                componentRestrictions: { country: 'in' },
                 fields: ['address_components', 'formatted_address', 'geometry', 'name'],
             });
 
@@ -115,24 +134,39 @@ export const GoogleMapsAutocomplete = ({
                     const place = autocompleteRef.current.getPlace();
                     console.log('Place selected:', place);
 
-                    if (!place || !place.geometry || !place.geometry.location) {
+                    if (!place) {
+                        console.log('No place returned from Google Autocomplete');
+                        onChangeRef.current(inputRef.current?.value || '', undefined);
+                        return;
+                    }
+
+                    if (!place.geometry || !place.geometry.location) {
                         // User entered text but didn't select from dropdown
-                        console.log('No geometry found, using input value');
-                        onChange(inputRef.current?.value || '');
+                        console.log('No geometry found for place:', place.name || 'unknown');
+                        onChangeRef.current(inputRef.current?.value || '', undefined);
                         return;
                     }
 
                     // Extract location details
-                    const locationString = extractLocationString(place);
+                    const details = extractLocationDetails(place);
                     const coordinates = {
                         lat: place.geometry.location.lat(),
                         lng: place.geometry.location.lng(),
                     };
 
-                    console.log('Location extracted:', { locationString, coordinates });
+                    const locationDetails: LocationDetails = {
+                        ...details,
+                        coordinates
+                    };
 
-                    // Call onChange with both location string and coordinates
-                    onChange(locationString, coordinates);
+                    const locationString = details.city && details.state
+                        ? `${details.city}, ${details.state}`
+                        : details.city || place.formatted_address;
+
+                    console.log('Location extracted:', { locationString, locationDetails });
+
+                    // Call onChange with both location string and all details
+                    onChangeRef.current(locationString, locationDetails);
 
                     // Update input value
                     if (inputRef.current) {
@@ -140,43 +174,42 @@ export const GoogleMapsAutocomplete = ({
                     }
                 } catch (placeError) {
                     console.error('Error processing place selection:', placeError);
-                    // Fallback: use input value
-                    onChange(inputRef.current?.value || '');
+                    onChangeRef.current(inputRef.current?.value || '', undefined);
                 }
             });
         } catch (error) {
             console.error('Failed to initialize Google Places Autocomplete:', error);
             setApiFailed(true);
         }
-    }, [isApiLoaded, disabled, onChange]);
+        // NOTE: Explicitly omitting onChange from dependencies to prevent re-initialization
+        // We use onChangeRef instead.
+    }, [isApiLoaded, disabled]);
 
-    // Extract clean location string from place object
-    const extractLocationString = (place: any): string => {
-        // Try to get a clean city name from address components
+    // Extract structured location details from place object
+    const extractLocationDetails = (place: any): { city: string; state: string; country: string } => {
         const addressComponents = place.address_components || [];
         let city = '';
         let state = '';
+        let country = '';
 
         for (const component of addressComponents) {
             const types = component.types;
 
-            if (types.includes('locality')) {
+            if (types.includes('locality') || types.includes('sublocality_level_1')) {
                 city = component.long_name;
             } else if (types.includes('administrative_area_level_1')) {
                 state = component.short_name || component.long_name;
+            } else if (types.includes('country')) {
+                country = component.long_name;
             }
         }
 
-        // Build location string
-        if (city && state) {
-            return `${city}, ${state}`;
-        } else if (city) {
-            return city;
-        } else if (place.name) {
-            return place.name;
-        } else {
-            return place.formatted_address || '';
+        // Fallback for city if locality is missing (common in some regions)
+        if (!city && place.name && place.name !== place.formatted_address) {
+            city = place.name;
         }
+
+        return { city, state, country };
     };
 
     // Fallback to plain input if API failed or not loaded
@@ -228,16 +261,11 @@ export const GoogleMapsAutocomplete = ({
                 ref={inputRef}
                 type="text"
                 id={id}
-                defaultValue={value}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
                 className={className}
                 disabled={disabled}
-                onBlur={(e) => {
-                    // If user types without selecting, update with typed value
-                    if (e.target.value !== value) {
-                        onChange(e.target.value);
-                    }
-                }}
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                 <MaterialSymbol name="location_on" size={20} className="text-gray-400" />

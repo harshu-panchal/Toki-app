@@ -101,7 +101,7 @@ export const deleteAccount = async (req, res, next) => {
 export const discoverFemales = async (req, res, next) => {
     try {
         const { filter = 'all', limit = 20, page = 1, language = 'en' } = req.query;
-        const cacheKey = `discover:females:${filter}:${page}:${limit}:${language}`;
+        const cacheKey = `discover:females:${req.user.id}:${filter}:${page}:${limit}:${language}`;
 
         // Try cache first (but only for first page to keep it fresh)
         const { default: memoryCache, CACHE_TTL } = await import('../../core/cache/memoryCache.js');
@@ -119,7 +119,23 @@ export const discoverFemales = async (req, res, next) => {
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
+        // Get current user's blocked list and coordinates in one query
+        const currentUser = await User.findById(req.user.id).select('blockedUsers profile.location.coordinates').lean();
+        const blockedUserIds = currentUser?.blockedUsers || [];
+        const currentUserCoords = currentUser?.profile?.location?.coordinates?.coordinates;
+        const hasCurrentUserCoords = currentUserCoords && currentUserCoords[0] !== 0 && currentUserCoords[1] !== 0;
+
+        // Find users who have blocked the current user
+        const usersWhoBlockedMe = await User.find({
+            blockedUsers: req.user.id
+        }).select('_id').lean();
+        const blockerIds = usersWhoBlockedMe.map(u => u._id);
+
         const query = {
+            _id: {
+                $ne: req.user.id, // Exclude current user
+                $nin: [...blockedUserIds, ...blockerIds] // Exclude blocked users and users who blocked me
+            },
             role: 'female',
             approvalStatus: 'approved',
             isBlocked: { $ne: true },
@@ -156,11 +172,6 @@ export const discoverFemales = async (req, res, next) => {
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
-
-        // Get current user's coordinates for distance calculation (GeoJSON format)
-        const currentUser = await User.findById(req.user.id).select('profile.location.coordinates').lean();
-        const currentUserCoords = currentUser?.profile?.location?.coordinates?.coordinates;
-        const hasCurrentUserCoords = currentUserCoords && currentUserCoords[0] !== 0 && currentUserCoords[1] !== 0;
 
         // Transform for frontend
         const profiles = users.map(user => {

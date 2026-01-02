@@ -57,6 +57,7 @@ export const updateUserProfile = async (userId, data) => {
         throw new NotFoundError('User not found');
     }
 
+    // Initialize profile if it doesn't exist
     if (!user.profile) user.profile = {};
 
     if (data.name) user.profile.name = data.name;
@@ -65,7 +66,7 @@ export const updateUserProfile = async (userId, data) => {
     if (data.occupation) user.profile.occupation = data.occupation;
 
     // Handle location updates - consolidated into profile.location
-    if (data.city || data.location || data.latitude || data.longitude) {
+    if (data.city || data.location || (data.latitude !== undefined && data.longitude !== undefined)) {
         if (!user.profile.location) {
             user.profile.location = {
                 city: '',
@@ -76,26 +77,32 @@ export const updateUserProfile = async (userId, data) => {
             };
         }
 
-        // Update city from either 'city' or 'location' field
-        if (data.city) {
-            user.profile.location.city = data.city;
-        } else if (data.location) {
-            user.profile.location.city = data.location;
-        }
+        // Update city/state/country
+        if (data.city) user.profile.location.city = data.city;
+        else if (data.location) user.profile.location.city = data.location;
+
+        if (data.state) user.profile.location.state = data.state;
+        if (data.country) user.profile.location.country = data.country;
 
         // Handle coordinates from Google Maps Autocomplete
-        if (data.latitude && data.longitude) {
-            if (!user.profile.location.coordinates) {
+        if (data.latitude !== undefined && data.longitude !== undefined) {
+            const lat = parseFloat(data.latitude);
+            const lng = parseFloat(data.longitude);
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                // Set coordinates correctly for GeoJSON [longitude, latitude]
                 user.profile.location.coordinates = {
                     type: 'Point',
-                    coordinates: [0, 0]
+                    coordinates: [lng, lat]
                 };
+                // Ensure Mongoose knows this nested object changed
+                user.markModified('profile.location');
+                user.markModified('profile.location.coordinates');
             }
-            user.profile.location.coordinates.coordinates = [data.longitude, data.latitude]; // [lng, lat] for GeoJSON
         }
     }
 
-    if (data.interests) {
+    if (data.interests && Array.isArray(data.interests)) {
         user.profile.interests = data.interests;
     }
 

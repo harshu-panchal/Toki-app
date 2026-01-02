@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { MaterialSymbol } from './MaterialSymbol';
 import { GoogleMapsAutocomplete } from './GoogleMapsAutocomplete';
 import axios from 'axios';
@@ -11,15 +11,39 @@ interface LocationPromptModalProps {
     onClose?: () => void;
 }
 
+interface LocationDetails {
+    city?: string;
+    state?: string;
+    country?: string;
+    coordinates?: { lat: number; lng: number };
+}
+
 export const LocationPromptModal = ({ onSave, onClose }: LocationPromptModalProps) => {
     const { user } = useAuth();
     const [location, setLocation] = useState(user?.location || '');
+    const [city, setCity] = useState(user?.city || '');
+    const [stateName, setStateName] = useState('');
+    const [countryName, setCountryName] = useState('');
     const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(
         user?.latitude && user?.longitude ? { lat: user.latitude, lng: user.longitude } : null
     );
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+    const handleLocationChange = useCallback((value: string, details?: LocationDetails) => {
+        setLocation(value);
+        if (details) {
+            setCoordinates(details.coordinates || null);
+            setCity(details.city || value);
+            setStateName(details.state || '');
+            setCountryName(details.country || '');
+        } else {
+            setCoordinates(null);
+            setCity(value);
+        }
+        if (error) setError('');
+    }, [error]);
 
     const handleUseMyLocation = async () => {
         if (!navigator.geolocation) {
@@ -30,31 +54,25 @@ export const LocationPromptModal = ({ onSave, onClose }: LocationPromptModalProp
         setIsFetchingLocation(true);
         setError('');
 
-        // Check if permission API is available
         if (navigator.permissions) {
             try {
                 const permissionStatus = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-
                 if (permissionStatus.state === 'denied') {
                     setError('Location permission denied. Please enable in your device settings.');
                     setIsFetchingLocation(false);
                     return;
                 }
             } catch (e) {
-                // Permission API not supported, continue with getCurrentPosition
-                console.log('Permission API not supported, using getCurrentPosition');
+                console.log('Permission API error', e);
             }
         }
 
-        // This will trigger the native Android/browser permission prompt if not granted
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-
                 setCoordinates({ lat, lng });
 
-                // Reverse geocode to get city name
                 try {
                     const response = await fetch(
                         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${import.meta.env.VITE_GOOGLE_MAPS_AND_TRANSLATE_API}`
@@ -63,50 +81,42 @@ export const LocationPromptModal = ({ onSave, onClose }: LocationPromptModalProp
 
                     if (data.results && data.results.length > 0) {
                         const addressComponents = data.results[0].address_components;
-                        let city = '';
-                        let state = '';
+                        let foundCity = '';
+                        let foundState = '';
+                        let foundCountry = '';
 
                         for (const component of addressComponents) {
                             if (component.types.includes('locality')) {
-                                city = component.long_name;
+                                foundCity = component.long_name;
                             } else if (component.types.includes('administrative_area_level_1')) {
-                                state = component.short_name;
+                                foundState = component.short_name;
+                            } else if (component.types.includes('country')) {
+                                foundCountry = component.long_name;
                             }
                         }
 
-                        const locationString = city && state ? `${city}, ${state}` : city || data.results[0].formatted_address;
+                        const locationString = foundCity && foundState ? `${foundCity}, ${foundState}` : foundCity || data.results[0].formatted_address;
                         setLocation(locationString);
+                        setCity(foundCity || locationString);
+                        setStateName(foundState);
+                        setCountryName(foundCountry);
                     }
                 } catch (err) {
                     console.error('Reverse geocoding failed:', err);
                     setLocation(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                    setCity(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
                 }
-
                 setIsFetchingLocation(false);
             },
             (err) => {
-                // Code 1 is PERMISSION_DENIED
-                if (err.code === 1) {
-                    console.warn('User denied geolocation permission');
-                    setError('Location access denied. Please enable in your device settings and try again.');
-                } else if (err.code === 2) {
-                    setError('Unable to determine your location. Please enter manually.');
-                } else if (err.code === 3) {
-                    setError('Location request timed out. Please try again or enter manually.');
-                } else {
-                    console.error('Geolocation error:', err);
-                    setError('Failed to get your location. Please enter manually.');
-                }
+                if (err.code === 1) setError('Location access denied. Please enable in settings.');
+                else if (err.code === 2) setError('Unable to determine location. Please enter manually.');
+                else setError('Failed to get location. Please enter manually.');
                 setIsFetchingLocation(false);
             },
-            {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0
-            }
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
     };
-
 
     const handleSave = async () => {
         if (!location.trim()) {
@@ -121,10 +131,11 @@ export const LocationPromptModal = ({ onSave, onClose }: LocationPromptModalProp
             const token = localStorage.getItem('matchmint_auth_token');
             const payload: any = {
                 location: location.trim(),
-                city: location.trim()
+                city: city.trim() || location.trim(),
+                state: stateName,
+                country: countryName
             };
 
-            // Add coordinates if available - backend will store in GeoJSON format
             if (coordinates) {
                 payload.latitude = coordinates.lat;
                 payload.longitude = coordinates.lng;
@@ -170,11 +181,7 @@ export const LocationPromptModal = ({ onSave, onClose }: LocationPromptModalProp
                     <GoogleMapsAutocomplete
                         id="location"
                         value={location}
-                        onChange={(value, coords) => {
-                            setLocation(value);
-                            if (coords) setCoordinates(coords);
-                            if (error) setError('');
-                        }}
+                        onChange={handleLocationChange}
                         placeholder="e.g., Mumbai, Andheri"
                         className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 dark:bg-[#2f151e] dark:text-white ${error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                             }`}

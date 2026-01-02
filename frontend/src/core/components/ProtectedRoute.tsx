@@ -1,12 +1,13 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { LocationPromptModal } from '../../shared/components/LocationPromptModal';
 
 interface ProtectedRouteProps {
     allowedRoles?: string[];
 }
 
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
-    const { user, isAuthenticated, isLoading } = useAuth();
+    const { user, isAuthenticated, isLoading, updateUser } = useAuth();
     const location = useLocation();
 
     if (isLoading) {
@@ -33,25 +34,27 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     }
 
     // Enforce mandatory location setting for male/female users (but NOT during onboarding or verification)
-    if (isAuthenticated && user && (user.role === 'male' || user.role === 'female')) {
-        const hasLocation = user.location && user.location.trim() !== '';
-        // Note: coordinates might be 0,0 but usually 0,0 is "not set" in our logic (missing)
-        const hasCoordinates = user.latitude !== undefined && user.longitude !== undefined &&
-            (user.latitude !== 0 || user.longitude !== 0);
+    const isMissingLocation = isAuthenticated && user && (user.role === 'male' || user.role === 'female') && (
+        !(user.location && user.location.trim() !== '') ||
+        !(user.latitude !== undefined && user.longitude !== undefined && (user.latitude !== 0 || user.longitude !== 0))
+    );
 
-        if (!hasLocation || !hasCoordinates) {
-            const dashboardPath = user.role === 'male' ? '/male/dashboard' : '/female/dashboard';
+    const isOnboarding = location.pathname.startsWith('/onboarding') ||
+        location.pathname === '/verification-pending';
 
-            // Allow onboarding and verification screens
-            const isOnboarding = location.pathname.startsWith('/onboarding') ||
-                location.pathname === '/verification-pending';
-
-            // Only redirect if not already on the dashboard or onboarding
-            if (location.pathname !== dashboardPath && !isOnboarding) {
-                return <Navigate to={dashboardPath} replace />;
-            }
-        }
-    }
-
-    return <Outlet />;
+    return (
+        <>
+            {isMissingLocation && !isOnboarding && (
+                <LocationPromptModal
+                    onSave={(loc, coords) => updateUser({
+                        location: loc,
+                        city: loc,
+                        latitude: coords?.lat,
+                        longitude: coords?.lng
+                    })}
+                />
+            )}
+            <Outlet />
+        </>
+    );
 };

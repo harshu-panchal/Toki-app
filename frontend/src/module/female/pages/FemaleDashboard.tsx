@@ -10,7 +10,6 @@ import { FemaleTopNavbar } from '../components/FemaleTopNavbar';
 import { FemaleSidebar } from '../components/FemaleSidebar';
 import { QuickActionsGrid } from '../components/QuickActionsGrid';
 import { useFemaleNavigation } from '../hooks/useFemaleNavigation';
-import { LocationPromptModal } from '../../../shared/components/LocationPromptModal';
 import { PermissionPrompt } from '../../../shared/components/PermissionPrompt';
 import { usePermissions } from '../../../core/hooks/usePermissions';
 import userService from '../../../core/services/user.service';
@@ -21,11 +20,10 @@ import { useTranslation } from '../../../core/hooks/useTranslation';
 const FemaleDashboardContent = () => {
   const { t } = useTranslation();
   const [dashboardData, setDashboardData] = useState<FemaleDashboardData | null>(null);
-  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useFemaleNavigation();
 
   // Permission management
@@ -63,14 +61,6 @@ const FemaleDashboardContent = () => {
     // Protect route: Redirect if not approved
     if (user && user.role === 'female' && user.approvalStatus !== 'approved') {
       navigate('/verification-pending');
-    }
-
-    // Check if user needs to set location (only for approved females)
-    // Show prompt if location is empty OR if coordinates are not set
-    const hasLocation = user?.location && user.location.trim() !== '';
-    const hasCoordinates = user?.latitude && user?.longitude && user.latitude !== 0 && user.longitude !== 0;
-    if (user && user.role === 'female' && user.approvalStatus === 'approved' && (!hasLocation || !hasCoordinates)) {
-      setShowLocationPrompt(true);
     }
   }, [user, navigate]);
 
@@ -130,17 +120,6 @@ const FemaleDashboardContent = () => {
     }
   };
 
-  const handleLocationSave = (location: string, coordinates?: { lat: number, lng: number }) => {
-    if (updateUser) {
-      updateUser({
-        location,
-        city: location,
-        latitude: coordinates?.lat,
-        longitude: coordinates?.lng
-      });
-    }
-    setShowLocationPrompt(false);
-  };
 
   if (isLoading) {
     return (
@@ -166,11 +145,6 @@ const FemaleDashboardContent = () => {
         />
       )}
 
-      {showLocationPrompt && (
-        <LocationPromptModal
-          onSave={handleLocationSave}
-        />
-      )}
       <FemaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
 
       <FemaleSidebar

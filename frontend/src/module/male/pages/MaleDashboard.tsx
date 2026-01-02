@@ -7,7 +7,6 @@ import { BottomNavigation } from '../components/BottomNavigation';
 import { MaleTopNavbar } from '../components/MaleTopNavbar';
 import { MaleSidebar } from '../components/MaleSidebar';
 import { useMaleNavigation } from '../hooks/useMaleNavigation';
-import { LocationPromptModal } from '../../../shared/components/LocationPromptModal';
 import { PermissionPrompt } from '../../../shared/components/PermissionPrompt';
 import { usePermissions } from '../../../core/hooks/usePermissions';
 import userService from '../../../core/services/user.service';
@@ -45,10 +44,9 @@ export const MaleDashboard = () => {
   // Use optimized chat hook - loads from cache immediately
   const { chats: rawChats, isLoading: isChatsLoading, refreshChats } = useOptimizedChatList();
 
-  const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const navigate = useNavigate();
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const { isSidebarOpen, setIsSidebarOpen, navigationItems, handleNavigationClick } = useMaleNavigation();
 
   // Permission management
@@ -81,15 +79,6 @@ export const MaleDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    // Check if user needs to set location
-    // Show prompt if location is empty OR if coordinates are not set
-    const hasLocation = user?.location && user.location.trim() !== '';
-    const hasCoordinates = user?.latitude && user?.longitude && user.latitude !== 0 && user.longitude !== 0;
-    if (user && (!hasLocation || !hasCoordinates)) {
-      setShowLocationPrompt(true);
-    }
-  }, [user]);
 
   const formatTimestamp = (date: string | Date): string => {
     if (!date) return '';
@@ -150,17 +139,6 @@ export const MaleDashboard = () => {
     navigate('/male/discover');
   };
 
-  const handleLocationSave = (location: string, coordinates?: { lat: number, lng: number }) => {
-    if (updateUser) {
-      updateUser({
-        location,
-        city: location,
-        latitude: coordinates?.lat,
-        longitude: coordinates?.lng
-      });
-    }
-    setShowLocationPrompt(false);
-  };
 
   // Only show full loading screen if we have NO chats and NO nearby users AND are loading both
   // This allows cached chats to show up even if nearby users are loading
@@ -192,11 +170,6 @@ export const MaleDashboard = () => {
         />
       )}
 
-      {showLocationPrompt && (
-        <LocationPromptModal
-          onSave={handleLocationSave}
-        />
-      )}
       <MaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />
 
       <MaleSidebar

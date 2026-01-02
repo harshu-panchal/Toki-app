@@ -223,32 +223,38 @@ export const verifyPayment = async (req, res, next) => {
                     user.coinBalance = balanceAfter;
 
                     // Check if membership should be upgraded
-                    if (plan && plan.tier) {
+                    if (plan && plan.tier && plan.tier !== 'basic') {
                         previousTier = user.memberTier || 'basic';
                         const purchasedTierRank = tierRank[plan.tier] || 1;
                         const currentTierRank = tierRank[previousTier] || 1;
 
-                        if (purchasedTierRank > currentTierRank) {
+                        // Always set membershipUpgraded to true for any non-basic tier purchase
+                        // to trigger the celebration modal on the frontend
+                        membershipUpgraded = true;
+                        newTier = plan.tier;
+
+                        // Only update user's memberTier if the purchased tier is higher OR equal to current
+                        // (Equal case handles renewals/rebuying same tier)
+                        if (purchasedTierRank >= currentTierRank) {
                             user.memberTier = plan.tier;
                             user.memberTierUpdatedAt = new Date();
-                            newTier = plan.tier;
-                            membershipUpgraded = true;
+                        }
 
-                            // Award membership badge (if not already awarded)
-                            const badgeId = `${plan.tier}_member`;
-                            const existingBadge = user.badges?.find(b => b.id === badgeId);
+                        // Always ensure the user has the badge for the purchased tier
+                        const badgeId = `${plan.tier}_member`;
+                        const existingBadge = user.badges?.find(b => b.id === badgeId);
 
-                            if (!existingBadge) {
-                                const tierName = plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1);
-                                user.badges = user.badges || [];
-                                user.badges.push({
-                                    id: badgeId,
-                                    name: `${tierName} Member`,
-                                    icon: tierIcons[plan.tier] || 'workspace_premium',
-                                    category: 'membership',
-                                    unlockedAt: new Date(),
-                                });
-                            }
+                        if (!existingBadge) {
+                            const tierName = plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1);
+                            user.badges = user.badges || [];
+                            user.badges.push({
+                                id: badgeId,
+                                name: `${tierName} Member`,
+                                icon: tierIcons[plan.tier] || 'workspace_premium',
+                                category: 'membership',
+                                isUnlocked: true,
+                                unlockedAt: new Date(),
+                            });
                         }
                     }
 

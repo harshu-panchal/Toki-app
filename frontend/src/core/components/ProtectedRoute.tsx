@@ -29,7 +29,28 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         // Role mismatch - redirect to their dashboard or unauthorized
         if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
         if (user.role === 'female') return <Navigate to="/female/dashboard" replace />;
-        return <Navigate to="/male/discover" replace />;
+        return <Navigate to="/male/dashboard" replace />;
+    }
+
+    // Enforce mandatory location setting for male/female users (but NOT during onboarding or verification)
+    if (isAuthenticated && user && (user.role === 'male' || user.role === 'female')) {
+        const hasLocation = user.location && user.location.trim() !== '';
+        // Note: coordinates might be 0,0 but usually 0,0 is "not set" in our logic (missing)
+        const hasCoordinates = user.latitude !== undefined && user.longitude !== undefined &&
+            (user.latitude !== 0 || user.longitude !== 0);
+
+        if (!hasLocation || !hasCoordinates) {
+            const dashboardPath = user.role === 'male' ? '/male/dashboard' : '/female/dashboard';
+
+            // Allow onboarding and verification screens
+            const isOnboarding = location.pathname.startsWith('/onboarding') ||
+                location.pathname === '/verification-pending';
+
+            // Only redirect if not already on the dashboard or onboarding
+            if (location.pathname !== dashboardPath && !isOnboarding) {
+                return <Navigate to={dashboardPath} replace />;
+            }
+        }
     }
 
     return <Outlet />;

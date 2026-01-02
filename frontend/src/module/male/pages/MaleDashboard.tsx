@@ -195,7 +195,6 @@ export const MaleDashboard = () => {
       {showLocationPrompt && (
         <LocationPromptModal
           onSave={handleLocationSave}
-          onClose={() => setShowLocationPrompt(false)}
         />
       )}
       <MaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />

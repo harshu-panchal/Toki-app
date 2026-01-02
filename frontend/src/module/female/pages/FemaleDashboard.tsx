@@ -169,7 +169,6 @@ const FemaleDashboardContent = () => {
       {showLocationPrompt && (
         <LocationPromptModal
           onSave={handleLocationSave}
-          onClose={() => setShowLocationPrompt(false)}
         />
       )}
       <FemaleTopNavbar onMenuClick={() => setIsSidebarOpen(true)} />

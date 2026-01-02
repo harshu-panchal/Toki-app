@@ -109,6 +109,10 @@ const userSchema = new mongoose.Schema(
         enum: ['membership', 'achievement', 'special', 'limited', 'vip'],
         default: 'achievement',
       },
+      isUnlocked: {
+        type: Boolean,
+        default: false,
+      },
       unlockedAt: {
         type: Date,
         default: Date.now,

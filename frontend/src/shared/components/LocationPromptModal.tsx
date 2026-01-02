@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MaterialSymbol } from './MaterialSymbol';
 import { GoogleMapsAutocomplete } from './GoogleMapsAutocomplete';
 import axios from 'axios';
+import { useAuth } from '../../core/context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -11,8 +12,11 @@ interface LocationPromptModalProps {
 }
 
 export const LocationPromptModal = ({ onSave, onClose }: LocationPromptModalProps) => {
-    const [location, setLocation] = useState('');
-    const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+    const { user } = useAuth();
+    const [location, setLocation] = useState(user?.location || '');
+    const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(
+        user?.latitude && user?.longitude ? { lat: user.latitude, lng: user.longitude } : null
+    );
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);

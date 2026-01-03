@@ -97,6 +97,10 @@ const videoCallSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        rejoinedUserIds: {
+            type: [String],
+            default: [],
+        },
     },
     {
         timestamps: true,

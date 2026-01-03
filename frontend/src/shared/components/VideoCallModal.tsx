@@ -27,6 +27,7 @@ export const VideoCallModal = () => {
         toggleMute,
         toggleCamera,
         rejoinCall,
+        closeModal,
         callPrice,
     } = useVideoCall();
 
@@ -109,8 +110,8 @@ export const VideoCallModal = () => {
             if (isActive) playTracks();
         }, 300);
 
-        // Reset internal processing if state becomes connected or idle
-        if (callState.status === 'connected' || callState.status === 'idle') {
+        // Reset internal processing if state becomes stable (not transitioning)
+        if (['connected', 'idle', 'ended', 'ringing'].includes(callState.status)) {
             setIsInternalProcessing(false);
         }
 
@@ -718,6 +719,8 @@ export const VideoCallModal = () => {
                                         onClick={async () => {
                                             if (isInternalProcessing) return;
                                             setIsInternalProcessing(true);
+                                            // Sending END_CALL to machine will transition to idle
+                                            // socketEmitters.endCall will trigger hard end on backend
                                             await endCall();
                                         }}
                                         disabled={isInternalProcessing}
@@ -730,9 +733,17 @@ export const VideoCallModal = () => {
                         )}
 
                         {!canRejoin && (
-                            <p className="text-gray-400 text-sm leading-relaxed px-4 mt-2">
-                                {callState.error || 'The call session has concluded.'}
-                            </p>
+                            <div className="flex flex-col gap-4 w-full">
+                                <p className="text-gray-400 text-sm leading-relaxed px-4 mt-2">
+                                    {callState.error || 'The call session has concluded.'}
+                                </p>
+                                <button
+                                    onClick={() => closeModal()}
+                                    className="w-full h-14 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 rounded-2xl font-bold transition-all active:scale-95 border border-indigo-600/20"
+                                >
+                                    Return to Dashboard
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>

@@ -57,8 +57,14 @@ const setCallTimer = (callId, type, durationMs, callback) => {
  * @param {string} userId - Authenticated user ID
  */
 export const setupVideoCallHandlers = (socket, io, userId) => {
+    // 🏷️ IMPORTANT: Join user-specific room for targeted notifications
+    socket.join(userId);
+    logger.debug(`👤 Socket ${socket.id} joined user room ${userId}`);
+
     // Helper: Validate call belongs to this user
     const validateCallOwnership = async (callId) => {
+        // Automatically join the call room as well for easier broadcasting
+        socket.join(callId);
         const call = await videoCallService.getCall(callId);
         if (!call) {
             logger.warn(`Call not found: ${callId}`);
@@ -89,6 +95,10 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
 
             // Initiate call (validates and locks coins)
             const videoCall = await videoCallService.initiateCall(userId, receiverId);
+
+            // Join the call room
+            const callId = videoCall._id.toString();
+            socket.join(callId);
 
             // Notify caller of success
             socket.emit('call:outgoing', {
@@ -156,6 +166,7 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
             processingCalls.add(`accept_${callId}`);
 
             logger.info(`📞 Call accepted: ${callId}`);
+            socket.join(callId);
 
             // Clear ringing timeout
             const timerData = activeCallTimers.get(callId);
@@ -368,11 +379,14 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                 activeCallTimers.delete(callId);
             }
 
-            // 2. Determine if rejoin is possible (e.g., > 10s left and first time rejoining)
-            const canRejoin = remainingTime > 10 && (call.rejoinCount || 0) < 1;
+            // 2. Determine if rejoin is possible (e.g., > 10s left and THIS user hasn't rejoined yet)
+            // If the call is already interrupted and we get another end request, it's a PERMANENT END
+            const userAlreadyRejoined = (call.rejoinedUserIds || []).includes(userId);
+            const canRejoin = remainingTime > 10 && !userAlreadyRejoined && call.status !== 'interrupted';
+            logger.info(`🔍 Call end decision: callId=${callId}, userId=${userId}, remainingTime=${remainingTime}, alreadyRejoined=${userAlreadyRejoined}, canRejoin=${canRejoin}`);
 
             if (canRejoin) {
-                logger.info(`⏸️ Call Soft Ended (Rejoin Active): ${callId}. Remaining: ${remainingTime}s`);
+                logger.info(`⏸️ Call Soft Ended (Rejoin Active): ${callId}. Remainning: ${remainingTime}s`);
 
                 try {
                     // Update DB to interrupted state
@@ -399,7 +413,13 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                 });
 
                 // Notify other user to WAIT
+                logger.info(`⏳ Sending call:waiting to ${otherUserId} in room ${callId} for call ${callId}`);
+                // Emit to the specific user AND the room for maximum reliability
                 io.to(otherUserId).emit('call:waiting', {
+                    callId,
+                    disconnectedUserId: userId,
+                });
+                socket.to(callId).emit('call:waiting', {
                     callId,
                     disconnectedUserId: userId,
                 });
@@ -493,6 +513,23 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
             let remainingSeconds = 0;
 
             if (interruptionData) {
+                // Fetch call to check per-user rejoin eligibility
+                const videoCall = await videoCallService.getCall(callId);
+                if (!videoCall) {
+                    socket.emit('call:error', { message: 'Call record not found' });
+                    return;
+                }
+
+                // PER-USER REJOIN LIMIT: Only one rejoin per participant
+                const userAlreadyRejoined = (videoCall.rejoinedUserIds || []).includes(userId);
+                if (userAlreadyRejoined) {
+                    logger.warn(`🛑 User ${userId} already used their rejoin for call ${callId}. Blocking second attempt.`);
+                    socket.emit('call:error', { message: 'You have already used your rejoin attempt for this call.' });
+
+                    // Actually, if they are trying to rejoin but shouldn't be allowed, we should probably hard-end it now
+                    return;
+                }
+
                 // We are recovering from an interruption
                 logger.info(`🔄 Resuming from interruption state for call ${callId}`);
                 clearTimeout(interruptionData.timer);
@@ -501,8 +538,8 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                 // Use the time that was saved when pause happened
                 remainingSeconds = interruptionData.remainingTimeWhenPaused;
 
-                // Fetch call just to get IDs (no need to run full rejoin logic if just resuming)
-                const videoCall = await videoCallService.getCall(callId);
+                // Re-use already fetched videoCall or update reference
+                // videoCall is already fetched at line 517
                 const callerId = videoCall.callerId._id ? videoCall.callerId._id.toString() : videoCall.callerId.toString();
                 const receiverId = videoCall.receiverId._id ? videoCall.receiverId._id.toString() : videoCall.receiverId.toString();
 
@@ -512,6 +549,13 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                 try {
                     videoCall.status = 'connected';
                     videoCall.endedAt = null;
+
+                    // Track this user's rejoin
+                    if (!videoCall.rejoinedUserIds.includes(userId)) {
+                        videoCall.rejoinedUserIds.push(userId);
+                    }
+                    videoCall.rejoinCount = (videoCall.rejoinCount || 0) + 1;
+
                     await videoCall.save();
 
                     await User.updateMany(
@@ -523,7 +567,15 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                 }
 
                 // Notify other user: "Partner is back!"
-                io.to(otherUserId).emit('call:peer-rejoined', { callId });
+                logger.info(`✅ Notifying ${otherUserId} that peer rejoined call ${callId} with ${remainingSeconds}s remaining`);
+                io.to(otherUserId).emit('call:peer-rejoined', {
+                    callId,
+                    remainingTime: remainingSeconds
+                });
+                socket.to(callId).emit('call:peer-rejoined', {
+                    callId,
+                    remainingTime: remainingSeconds
+                });
 
                 // Helper to setup timer & token
                 await setupCallResumption(videoCall, remainingSeconds, userId);
@@ -736,68 +788,94 @@ export const setupVideoCallHandlers = (socket, io, userId) => {
                     logger.info(`⏸️ Call paused. Remaining: ${remainingTime}s`);
                 }
 
-                // 3. Notify other user to WAIT
-                io.to(otherUserId).emit('call:waiting', {
-                    callId,
-                    disconnectedUserId: userId,
-                });
+                // 3. Determine if SOFT END is allowed (one rejoin per user)
+                const userAlreadyRejoined = (activeCall.rejoinedUserIds || []).includes(userId);
+                const canSoftEnd = remainingTime > 10 && !userAlreadyRejoined;
 
-                // 3.5 Mark call as interrupted in DB - wrapped in try-catch
-                try {
-                    activeCall.status = 'interrupted';
-                    activeCall.endedAt = new Date();
-                    await activeCall.save();
+                if (canSoftEnd) {
+                    logger.info(`⏸️ Accidental disconnect - allowing rejoin for ${userId}`);
+                    // 3.1 Notify other user to WAIT
+                    io.to(otherUserId).emit('call:waiting', {
+                        callId,
+                        disconnectedUserId: userId,
+                    });
 
-                    await User.updateMany(
-                        { _id: { $in: [activeCall.callerId, activeCall.receiverId] } },
-                        { $set: { isOnCall: false } }
-                    );
-                } catch (dbError) {
-                    logger.error(`DB update error during disconnect: ${dbError.message}`);
-                }
-
-                // 4. Start INTERRUPTION TIMEOUT (60s grace period)
-                // If user doesn't return, end call PERMANENTLY
-                const interruptionTimerId = setTimeout(async () => {
+                    // 3.2 Mark call as interrupted in DB
                     try {
-                        logger.info(`❌ Interruption timeout expired for call: ${callId}`);
+                        activeCall.status = 'interrupted';
+                        activeCall.endedAt = new Date();
+                        await activeCall.save();
 
-                        const endReason = activeCall.callerId.toString() === userId
-                            ? 'caller_disconnected'
-                            : 'receiver_disconnected';
-
-                        const videoCall = await videoCallService.endCall(
-                            callId,
-                            endReason,
-                            userId
+                        await User.updateMany(
+                            { _id: { $in: [activeCall.callerId, activeCall.receiverId] } },
+                            { $set: { isOnCall: false } }
                         );
-
-                        // Notify other user that waiting is over -> Call Ended
-                        io.to(otherUserId).emit('call:ended', {
-                            callId,
-                            reason: endReason,
-                            canRejoin: false,
-                            refunded: videoCall.billingStatus === 'refunded',
-                        });
-
-                        activeCallTimers.delete(`${callId}_interruption`);
-
-                    } catch (err) {
-                        logger.error(`Interruption timeout error: ${err.message}`);
+                    } catch (dbError) {
+                        logger.error(`DB update error during disconnect: ${dbError.message}`);
                     }
-                }, 60000); // 60 seconds grace
 
-                // Store interruption state so we can cancel it on rejoin
-                activeCallTimers.set(`${callId}_interruption`, {
-                    timer: interruptionTimerId,
-                    type: 'interruption',
-                    disconnectedUserId: userId,
-                    remainingTimeWhenPaused: remainingTime || activeCall.callDurationSeconds, // Fallback
-                });
+                    // 3.3 Start INTERRUPTION TIMEOUT (60s grace period)
+                    const interruptionTimerId = setTimeout(async () => {
+                        try {
+                            logger.info(`❌ Interruption timeout expired for call: ${callId}`);
+                            const endReason = activeCall.callerId.toString() === userId
+                                ? 'caller_disconnected'
+                                : 'receiver_disconnected';
 
+                            const videoCall = await videoCallService.endCall(callId, endReason, userId);
+
+                            const endData = {
+                                callId,
+                                reason: endReason,
+                                canRejoin: false,
+                                refunded: videoCall.billingStatus === 'refunded',
+                            };
+
+                            io.to(videoCall.callerId.toString()).emit('call:ended', endData);
+                            io.to(videoCall.receiverId.toString()).emit('call:ended', endData);
+                            activeCallTimers.delete(`${callId}_interruption`);
+                        } catch (err) {
+                            logger.error(`Interruption timeout error: ${err.message}`);
+                        }
+                    }, 60000);
+
+                    activeCallTimers.set(`${callId}_interruption`, {
+                        timer: interruptionTimerId,
+                        type: 'interruption',
+                        disconnectedUserId: userId,
+                        remainingTimeWhenPaused: remainingTime || activeCall.callDurationSeconds,
+                    });
+                } else {
+                    // HARD END on disconnect (already rejoined or no time left)
+                    logger.info(`🧹 Disconnect Hard End (Already rejoined or no time): ${callId}`);
+
+                    const endReason = activeCall.callerId.toString() === userId
+                        ? 'caller_disconnected'
+                        : 'receiver_disconnected';
+
+                    const videoCall = await videoCallService.endCall(callId, endReason, userId);
+
+                    const endData = {
+                        callId,
+                        reason: endReason,
+                        canRejoin: false,
+                        duration: videoCall.connectedAt
+                            ? Math.floor((Date.now() - new Date(videoCall.connectedAt).getTime()) / 1000)
+                            : 0,
+                    };
+
+                    io.to(videoCall.callerId.toString()).emit('call:ended', endData);
+                    io.to(videoCall.receiverId.toString()).emit('call:ended', endData);
+
+                    // Force clear after hard end
+                    setTimeout(() => {
+                        io.to(videoCall.callerId.toString()).emit('call:clear-all');
+                        io.to(videoCall.receiverId.toString()).emit('call:clear-all');
+                    }, 2000);
+                }
             }
         } catch (error) {
-            logger.error(`Disconnect cleanup error: ${error.message}`);
+            logger.error(`Disconnect handling error: ${error.message}`);
         }
     });
 };

@@ -302,10 +302,15 @@ export function createSocketEventBridge(send: (event: any) => void) {
         },
         'call:peer-rejoined': (data: any) => {
             console.log('📞 [SocketBridge] call:peer-rejoined', data);
-            send({ type: 'PEER_REJOINED', callId: data.callId });
+            send({
+                type: 'PEER_REJOINED',
+                callId: data.callId,
+                remainingTime: data.remainingTime
+            });
         },
         'call:rejoin-proceed': (data: any) => {
             console.log('📞 [SocketBridge] call:rejoin-proceed', data);
+            console.log('📞 [SocketBridge] rejoin remainingSeconds:', data.remainingSeconds);
             send({
                 type: 'REJOIN_PROCEED',
                 callId: data.callId,
@@ -358,6 +363,7 @@ export const socketEmitters = {
     },
 
     rejoinCall: (callId: string) => {
+        console.log('📞 [SocketEmitter] Emitting call:rejoin with callId:', callId);
         socketService.emitToServer('call:rejoin', { callId });
     },
 

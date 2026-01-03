@@ -229,6 +229,7 @@ class SocketService {
 
         // Call waiting
         this.socket.on('call:waiting', (data) => {
+            console.log('📞📞📞 SOCKET RECEIVED call:waiting:', data);
             this.emit('call:waiting', data);
         });
 

@@ -246,6 +246,7 @@ const actions = {
 
     setPeerRejoined: assign({
         isPeerDisconnected: () => false,
+        remainingTime: ({ context, event }) => (event as any).remainingTime ?? context.remainingTime,
     }),
 
     toggleMute: assign({
@@ -393,9 +394,12 @@ export const videoCallMachine = setup({
                     actions: actions.setAgoraCredentials,
                     guard: 'isValidCallId',
                 },
+                // Agora successfully connected - transition to connected
+                // This handles both initial connection and rejoin cases
                 AGORA_CONNECTED: {
-                    // Stay in connecting until CALL_STARTED
+                    target: 'connected',
                 },
+                // Also handle CALL_STARTED in case it arrives
                 CALL_STARTED: {
                     target: 'connected',
                     actions: actions.setCallStarted,
@@ -552,6 +556,9 @@ export const videoCallMachine = setup({
                 REJOIN_CALL: {
                     target: 'rejoining',
                     guard: 'canRejoin',
+                },
+                END_CALL: {
+                    target: 'idle',
                 },
                 CLOSE_MODAL: {
                     target: 'idle',

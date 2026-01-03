@@ -84,8 +84,9 @@ export const VideoCallProvider = ({ children }: VideoCallProviderProps) => {
             handleAgoraJoin();
         }
 
-        // Reset the join flag when going back to idle
-        if (currentState === 'idle') {
+        // Reset the join flag when going back to idle, ended, or rejoining
+        // This allows rejoin flow to trigger a new Agora join
+        if (['idle', 'ended', 'rejoining'].includes(currentState)) {
             agoraJoinInitiatedRef.current = false;
         }
     }, [state.value, state.context.agoraChannel, state.context.agoraToken]);
@@ -131,7 +132,13 @@ export const VideoCallProvider = ({ children }: VideoCallProviderProps) => {
                     timerRef.current = null;
                 }
 
-                // Cleanup Agora on idle
+                // Leave Agora channel on ended (but keep tracks for potential rejoin display)
+                // This allows rejoin to work with fresh credentials
+                if (currentState === 'ended') {
+                    agoraManager.leaveChannel();
+                }
+
+                // Full cleanup Agora on idle
                 if (currentState === 'idle') {
                     agoraManager.fullCleanup();
                     agoraJoinInitiatedRef.current = false; // Reset join flag
